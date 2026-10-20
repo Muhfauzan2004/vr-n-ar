@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lembar Presentasi AR Red Bull RB19</title>
+    <title>Lembar Target AR Red Bull RB19</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            padding: 30px 20px;
+            padding: 40px 20px;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #0f172a;
+            background: #0b0f19;
             color: #fff;
             display: flex;
             justify-content: center;
@@ -19,20 +19,20 @@
             min-height: 100vh;
         }
         .container {
-            max-width: 780px;
+            max-width: 580px;
             width: 100%;
-            background: #1e293b;
-            border: 2px solid #334155;
+            background: #111827;
+            border: 2px solid #1f2937;
             border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            padding: 40px 30px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
             text-align: center;
         }
         .tag {
             display: inline-block;
             background: #e11d48;
             color: #fff;
-            padding: 6px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 700;
@@ -42,84 +42,68 @@
         }
         h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.8rem;
-            margin: 0 0 10px 0;
+            font-size: 1.6rem;
+            margin: 0 0 8px 0;
             color: #f8fafc;
         }
-        p.subtitle {
+        p.desc {
             color: #94a3b8;
-            margin: 0 0 35px 0;
-            font-size: 0.95rem;
-        }
-        .cards-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            margin-bottom: 35px;
-        }
-        @media (max-width: 650px) {
-            .cards-grid { grid-template-columns: 1fr; }
-        }
-        .card {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 20px;
-            padding: 24px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .card-number {
-            background: #0284c7;
-            color: #fff;
-            font-size: 0.75rem;
-            font-weight: 800;
-            padding: 4px 10px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-        }
-        .card h2 {
-            margin: 0 0 8px 0;
-            font-size: 1.1rem;
-            color: #f1f5f9;
-        }
-        .card p {
-            margin: 0 0 16px 0;
-            font-size: 0.82rem;
-            color: #94a3b8;
-            line-height: 1.4;
-            min-height: 38px;
-        }
-        .qr-image {
-            width: 220px;
-            height: 220px;
-            object-fit: contain;
-            background: #fff;
-            padding: 12px;
-            border-radius: 16px;
-            border: 3px solid #38bdf8;
-            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
-        }
-        .marker-image {
-            width: 220px;
-            height: 220px;
-            object-fit: contain;
-            background: #fff;
-            padding: 12px;
-            border-radius: 16px;
-            border: 3px solid #e11d48;
-            box-shadow: 0 8px 25px rgba(225, 29, 72, 0.3);
-        }
-        .link-box {
-            background: #090d16;
-            border: 1px dashed #475569;
-            padding: 14px 20px;
-            border-radius: 12px;
-            font-family: monospace;
+            margin: 0 0 24px 0;
             font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .qr-wrapper {
+            background: #fff;
+            padding: 16px;
+            border-radius: 20px;
+            display: inline-block;
+            border: 4px solid #e11d48;
+            box-shadow: 0 10px 30px rgba(225, 29, 72, 0.35);
+            margin-bottom: 25px;
+        }
+        .qr-img {
+            width: 260px;
+            height: 260px;
+            display: block;
+        }
+        .steps {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 18px 20px;
+            text-align: left;
+            margin-bottom: 25px;
+            border: 1px solid #334155;
+        }
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            font-size: 0.88rem;
+            color: #e2e8f0;
+        }
+        .step-item:last-child {
+            margin-bottom: 0;
+        }
+        .step-badge {
+            background: #e11d48;
+            color: #fff;
+            font-weight: bold;
+            font-size: 0.75rem;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .link-text {
+            font-family: monospace;
+            font-size: 0.82rem;
             color: #38bdf8;
             word-break: break-all;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         .print-btn {
             background: #e11d48;
@@ -140,11 +124,10 @@
         @media print {
             body { background: #fff; color: #000; padding: 0; }
             .container { box-shadow: none; border: none; padding: 10px; max-width: 100%; color: #000; background: #fff; }
-            .card { background: #fff; border: 1px solid #ccc; color: #000; }
-            .card h2, h1 { color: #000; }
-            .card p, p.subtitle { color: #555; }
-            .link-box { background: #f1f5f9; color: #000; border-color: #aaa; }
+            .steps { background: #f8fafc; border: 1px solid #ddd; color: #000; }
+            .step-item { color: #000; }
             .print-btn { display: none; }
+            .qr-wrapper { border-color: #000; box-shadow: none; }
         }
     </style>
 </head>
@@ -152,29 +135,30 @@
 
     <div class="container">
         <span class="tag">SEMESTER 5 • VIRTUAL & AR</span>
-        <h1>AR RED BULL RB19 SHOWCASE</h1>
-        <p class="subtitle">Aplikasi Augmented Reality berbasis WebXR & Marker Tracking (MindAR)</p>
+        <h1>ALL-IN-ONE AR QR CODE</h1>
+        <p class="desc">1 QR Code untuk Scan Link sekaligus sebagai Tempat Mobil F1 Muncul</p>
 
-        <div class="cards-grid">
-            <!-- Langkah 1: QR Link Web -->
-            <div class="card">
-                <span class="card-number">LANGKAH 1</span>
-                <h2>Scan untuk Buka Kamera</h2>
-                <p>Scan QR ini menggunakan kamera HP / Google Lens untuk membuka halaman AR.</p>
-                <img src="./qrcode_link.png" alt="QR Code Link Website" class="qr-image">
+        <div class="qr-wrapper">
+            <img src="./target_marker.png" alt="All In One AR QR Code" class="qr-img">
+        </div>
+
+        <div class="steps">
+            <div class="step-item">
+                <span class="step-badge">1</span>
+                <span>Scan QR ini menggunakan kamera HP / Google Lens.</span>
             </div>
-
-            <!-- Langkah 2: Marker Image Target -->
-            <div class="card">
-                <span class="card-number">LANGKAH 2</span>
-                <h2>Target Marker AR</h2>
-                <p>Setelah kamera aktif, arahkan kamera ke gambar ini untuk memunculkan mobil F1.</p>
-                <img src="./target_marker.png" alt="Target Marker F1" class="marker-image">
+            <div class="step-item">
+                <span class="step-badge">2</span>
+                <span>Buka link dan izinkan akses kamera (*Allow Camera*).</span>
+            </div>
+            <div class="step-item">
+                <span class="step-badge">3</span>
+                <span>Arahkan kamera HP ke QR ini ➜ Mobil F1 Red Bull langsung muncul di atasnya! 🏎️</span>
             </div>
         </div>
 
-        <div class="link-box">
-            🌐 URL Web AR: https://muhfauzan2004.github.io/vr-n-ar/
+        <div class="link-text">
+            🌐 https://muhfauzan2004.github.io/vr-n-ar/
         </div>
 
         <button onclick="window.print()" class="print-btn">🖨️ Cetak / Simpan ke PDF</button>
