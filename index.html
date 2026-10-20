@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Red Bull RB19</title>
+
+    <!-- Library A-Frame & MindAR -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+
+    <a-scene 
+        mindar-image="imageTargetSrc: ./targets.mind;" 
+        color-space="sRGB" 
+        renderer="colorManagement: true, physicallyCorrectLights: true" 
+        vr-mode-ui="enabled: false" 
+        device-orientation-permission-ui="enabled: false">
+
+        <!-- Asset Model 3D F1 -->
+        <a-assets>
+            <a-asset-item id="f1Model" src="./redbull_RB19.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Kamera AR -->
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <!-- Marker QR & Model 3D F1 -->
+        <a-entity mindar-image-target="targetIndex: 0">
+            <a-gltf-model 
+                src="#f1Model" 
+                position="0 0 0.05" 
+                rotation="90 0 0" 
+                scale="0.22 0.22 0.22">
+            </a-gltf-model>
+        </a-entity>
+
+    </a-scene>
+
+</body>
+
+</html>
