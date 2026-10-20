@@ -53,6 +53,27 @@
             color: #94a3b8;
             font-weight: 500;
         }
+
+        /* Banner Info Model Aktif di Bagian Atas */
+        #modelBadge {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 8px 18px;
+            border-radius: 20px;
+            color: #fff;
+            font-family: system-ui, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1000;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -61,11 +82,15 @@
     <!-- Indikator Loading Ringan saat Kamera Menyiapkan Feed -->
     <div id="loader">
         <div class="spinner"></div>
-        <div class="loader-text">Memulai Kamera AR (3 Model)...</div>
+        <div class="loader-text">Memulai Kamera AR...</div>
     </div>
 
+    <!-- Badge Info Model -->
+    <div id="modelBadge">🏎️ Arahkan kamera ke QR Code</div>
+
+    <!-- maxTrack: 1 memastikan hanya 1 model yang ditampilkan pada satu waktu (anti-tumpang tindih) -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 3;" 
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true" 
         vr-mode-ui="enabled: false" 
@@ -80,7 +105,7 @@
         <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
 
         <!-- TARGET 0: Red Bull RB19 (qr_redbull.png) -->
-        <a-entity mindar-image-target="targetIndex: 0">
+        <a-entity id="target-redbull" mindar-image-target="targetIndex: 0">
             <a-gltf-model 
                 src="./redbull_RB19.glb" 
                 position="0 0 0.05" 
@@ -90,7 +115,7 @@
         </a-entity>
 
         <!-- TARGET 1: Ferrari F1 (qr_ferrari.png) -->
-        <a-entity mindar-image-target="targetIndex: 1">
+        <a-entity id="target-ferrari" mindar-image-target="targetIndex: 1">
             <a-gltf-model 
                 src="./ferrari_f1.glb" 
                 position="0 0 0.05" 
@@ -100,7 +125,7 @@
         </a-entity>
 
         <!-- TARGET 2: Ducati Desmosedici (qr_ducati.png) -->
-        <a-entity mindar-image-target="targetIndex: 2">
+        <a-entity id="target-ducati" mindar-image-target="targetIndex: 2">
             <a-gltf-model 
                 src="./ducati_desmo.glb" 
                 position="0 0 0.05" 
@@ -114,6 +139,56 @@
     <script>
         const scene = document.querySelector('a-scene');
         const loader = document.getElementById('loader');
+        const badge = document.getElementById('modelBadge');
+
+        const targetRedbull = document.getElementById('target-redbull');
+        const targetFerrari = document.getElementById('target-ferrari');
+        const targetDucati = document.getElementById('target-ducati');
+
+        // Membaca parameter ?model=redbull / ?model=ferrari / ?model=ducati dari URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedModel = (urlParams.get('model') || '').toLowerCase();
+
+        // 1. JIKA URL MENENTUKAN MODEL KHUSUS: Hapus model lain dari memori (100% Anti-Tumpang Tindih)
+        if (selectedModel === 'redbull' || selectedModel === 'rb19') {
+            badge.innerText = '🏎️ Target: Red Bull Racing RB19';
+            if (targetFerrari) targetFerrari.remove();
+            if (targetDucati) targetDucati.remove();
+        } else if (selectedModel === 'ferrari') {
+            badge.innerText = '🏎️ Target: Scuderia Ferrari F1';
+            if (targetRedbull) targetRedbull.remove();
+            if (targetDucati) targetDucati.remove();
+        } else if (selectedModel === 'ducati') {
+            badge.innerText = '🏍️ Target: Ducati Desmosedici';
+            if (targetRedbull) targetRedbull.remove();
+            if (targetFerrari) targetFerrari.remove();
+        } else {
+            // 2. JIKA TANPA PARAMETER: Terapkan aturan Mutually Exclusive (Hanya 1 model aktif bergantian)
+            const allTargets = [
+                { el: targetRedbull, name: '🏎️ Red Bull RB19 Terdeteksi!' },
+                { el: targetFerrari, name: '🏎️ Ferrari F1 Terdeteksi!' },
+                { el: targetDucati, name: '🏍️ Ducati Desmosedici Terdeteksi!' }
+            ];
+
+            allTargets.forEach((item, idx) => {
+                if (!item.el) return;
+                
+                item.el.addEventListener('targetFound', () => {
+                    badge.innerText = item.name;
+                    // Sembunyikan target lainnya secara paksa agar tidak tumpang tindih
+                    allTargets.forEach((other, otherIdx) => {
+                        if (other.el && otherIdx !== idx) {
+                            other.el.object3D.visible = false;
+                        }
+                    });
+                    item.el.object3D.visible = true;
+                });
+
+                item.el.addEventListener('targetLost', () => {
+                    badge.innerText = '🔍 Mencari QR Code...';
+                });
+            });
+        }
 
         // Hilangkan layar loading begitu kamera aktif
         scene.addEventListener('arReady', () => {
@@ -123,7 +198,7 @@
             }, 400);
         });
 
-        // Tangani jika ada pesan error kamera
+        // Tangani pesan jika kamera gagal diakses
         scene.addEventListener('arError', () => {
             loader.querySelector('.loader-text').innerText = 'Gagal mengakses kamera. Pastikan izin kamera aktif & menggunakan HTTPS.';
             loader.querySelector('.spinner').style.display = 'none';
