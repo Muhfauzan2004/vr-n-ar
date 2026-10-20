@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Red Bull RB19</title>
+    <title>AR Racing Showcase (Red Bull, Ferrari, Ducati)</title>
 
     <!-- Library A-Frame & MindAR -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -61,11 +61,11 @@
     <!-- Indikator Loading Ringan saat Kamera Menyiapkan Feed -->
     <div id="loader">
         <div class="spinner"></div>
-        <div class="loader-text">Memulai Kamera AR...</div>
+        <div class="loader-text">Memulai Kamera AR (3 Model)...</div>
     </div>
 
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind;" 
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 3;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true" 
         vr-mode-ui="enabled: false" 
@@ -74,13 +74,38 @@
         <!-- Kamera AR -->
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- Marker QR & Model 3D F1 (Dimuat langsung tanpa memblokir kamera) -->
+        <!-- Pencahayaan Realistis -->
+        <a-light type="ambient" intensity="1.5" color="#ffffff"></a-light>
+        <a-light type="directional" position="2 4 3" intensity="2.0" color="#ffffff"></a-light>
+        <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
+
+        <!-- TARGET 0: Red Bull RB19 (qr_redbull.png) -->
         <a-entity mindar-image-target="targetIndex: 0">
             <a-gltf-model 
                 src="./redbull_RB19.glb" 
                 position="0 0 0.05" 
                 rotation="90 0 0" 
                 scale="0.22 0.22 0.22">
+            </a-gltf-model>
+        </a-entity>
+
+        <!-- TARGET 1: Ferrari F1 (qr_ferrari.png) -->
+        <a-entity mindar-image-target="targetIndex: 1">
+            <a-gltf-model 
+                src="./ferrari_f1.glb" 
+                position="0 0 0.05" 
+                rotation="90 0 0" 
+                scale="0.15 0.15 0.15">
+            </a-gltf-model>
+        </a-entity>
+
+        <!-- TARGET 2: Ducati Desmosedici (qr_ducati.png) -->
+        <a-entity mindar-image-target="targetIndex: 2">
+            <a-gltf-model 
+                src="./ducati_desmo.glb" 
+                position="0 0 0.05" 
+                rotation="90 0 0" 
+                scale="0.26 0.26 0.26">
             </a-gltf-model>
         </a-entity>
 
