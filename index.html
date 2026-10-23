@@ -14,6 +14,8 @@
     <!-- Preload 3D Models in Background for Instant (0ms) Appearance on Scan -->
     <link rel="preload" href="./redbull_RB19.glb" as="fetch" crossorigin="anonymous">
     <link rel="preload" href="./ferarri_f1-75.glb" as="fetch" crossorigin="anonymous">
+    <link rel="preload" href="./mercy-w15.glb" as="fetch" crossorigin="anonymous">
+    <link rel="preload" href="./f1-amr23.glb" as="fetch" crossorigin="anonymous">
     <link rel="preload" href="./ducati_desmo.glb" as="fetch" crossorigin="anonymous">
 
     <!-- Model Viewer & jsQR Library -->
@@ -25,6 +27,8 @@
             --accent-cyan: #38bdf8;
             --accent-redbull: #0284c7;
             --accent-ferrari: #e11d48;
+            --accent-mercedes: #00a19c;
+            --accent-astonmartin: #00594f;
             --accent-ducati: #f59e0b;
         }
 
@@ -229,7 +233,7 @@
             left: 0;
             right: 0;
             z-index: 25;
-            display: none; /* Muncul bersama model 3D */
+            display: none;
             padding: 18px 20px;
             justify-content: space-between;
             align-items: center;
@@ -373,6 +377,7 @@
     <canvas id="scan-canvas"></canvas>
 
     <!-- 2. Transparent 3D Model Viewers (Preloaded in Memory for 0ms Instant Display) -->
+    <!-- Model 1: Red Bull RB19 -->
     <model-viewer id="mv-redbull"
         class="ar-model-viewer"
         src="./redbull_RB19.glb"
@@ -386,6 +391,7 @@
         interaction-prompt="none">
     </model-viewer>
 
+    <!-- Model 2: Ferrari F1-75 -->
     <model-viewer id="mv-ferrari"
         class="ar-model-viewer"
         src="./ferarri_f1-75.glb"
@@ -399,6 +405,35 @@
         interaction-prompt="none">
     </model-viewer>
 
+    <!-- Model 3: Mercedes W15 -->
+    <model-viewer id="mv-mercedes"
+        class="ar-model-viewer"
+        src="./mercy-w15.glb"
+        loading="eager"
+        camera-controls
+        auto-rotate
+        rotation-per-second="25deg"
+        shadow-intensity="1.6"
+        shadow-softness="0.7"
+        exposure="1.0"
+        interaction-prompt="none">
+    </model-viewer>
+
+    <!-- Model 4: Aston Martin AMR23 -->
+    <model-viewer id="mv-astonmartin"
+        class="ar-model-viewer"
+        src="./f1-amr23.glb"
+        loading="eager"
+        camera-controls
+        auto-rotate
+        rotation-per-second="25deg"
+        shadow-intensity="1.6"
+        shadow-softness="0.7"
+        exposure="1.0"
+        interaction-prompt="none">
+    </model-viewer>
+
+    <!-- Model 5: Ducati Desmosedici -->
     <model-viewer id="mv-ducati"
         class="ar-model-viewer"
         src="./ducati_desmo.glb"
@@ -435,7 +470,7 @@
         </div>
 
         <div class="scanner-footer-hint">
-            Scan QR Red Bull, Ferrari, atau Ducati pada laptop/kertas untuk memunculkan model 3D di kamera ini
+            Scan QR Red Bull, Ferrari, Mercedes, Aston Martin, atau Ducati untuk memunculkan model 3D di kamera ini
         </div>
     </div>
 
@@ -473,6 +508,16 @@
                 cat: 'Scuderia Ferrari • Formula 1',
                 color: '#e11d48'
             },
+            'mercedes': {
+                name: 'Mercedes-AMG F1 W15',
+                cat: 'Mercedes-AMG PETRONAS • Formula 1',
+                color: '#00a19c'
+            },
+            'astonmartin': {
+                name: 'Aston Martin AMR23',
+                cat: 'Aston Martin Aramco • Formula 1',
+                color: '#00594f'
+            },
             'ducati': {
                 name: 'Ducati Desmosedici GP',
                 cat: 'Ducati Lenovo • MotoGP',
@@ -484,13 +529,15 @@
         const modelLoadedState = {
             'redbull': false,
             'ferrari': false,
+            'mercedes': false,
+            'astonmartin': false,
             'ducati': false
         };
 
         let currentActiveModel = null;
         let videoStream = null;
         let isScanning = true;
-        let currentFacingMode = 'environment'; // Kamera belakang HP
+        let currentFacingMode = 'environment';
         let audioCtx = null;
         let lastScannedText = '';
         let lastScanTime = 0;
@@ -505,7 +552,7 @@
         const modelBadge = document.getElementById('model-badge');
 
         // Pantau status preload masing-masing model
-        ['redbull', 'ferrari', 'ducati'].forEach(k => {
+        Object.keys(VEHICLES).forEach(k => {
             const mv = document.getElementById(`mv-${k}`);
             if (mv) {
                 mv.addEventListener('load', () => {
@@ -627,6 +674,10 @@
                 matchedKey = 'redbull';
             } else if (lower.includes('ferrari') || lower.includes('f1-75')) {
                 matchedKey = 'ferrari';
+            } else if (lower.includes('mercedes') || lower.includes('mercy') || lower.includes('w15')) {
+                matchedKey = 'mercedes';
+            } else if (lower.includes('astonmartin') || lower.includes('aston') || lower.includes('amr23')) {
+                matchedKey = 'astonmartin';
             } else if (lower.includes('ducati') || lower.includes('desmo')) {
                 matchedKey = 'ducati';
             }
@@ -687,7 +738,6 @@
             lastScannedText = '';
             isScanning = true;
 
-            // Bersihkan parameter URL
             const url = new URL(window.location);
             url.searchParams.delete('model');
             window.history.replaceState({}, '', url);
@@ -697,7 +747,6 @@
         window.addEventListener('DOMContentLoaded', () => {
             startCamera();
 
-            // Cek jika dibuka langsung melalui link QR (misal dari kamera HP bawaan / Google Lens)
             const params = new URLSearchParams(window.location.search);
             const modelParam = (params.get('model') || '').toLowerCase();
             if (modelParam && VEHICLES[modelParam]) {
