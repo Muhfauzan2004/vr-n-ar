@@ -6,73 +6,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>AR Racing Showcase (Red Bull, Ferrari, Ducati)</title>
 
-    <!-- Library A-Frame & MindAR -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="./ar.js"></script>
 
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #000;
-            font-family: system-ui, sans-serif;
-        }
-
+        body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
         #badge {
-            position: fixed;
-            top: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.88);
-            border: 2px solid #0284c7;
-            padding: 8px 18px;
-            border-radius: 20px;
-            color: #fff;
-            font-size: 13px;
-            font-weight: bold;
-            z-index: 1000;
-            pointer-events: none;
+            position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9); border: 2px solid #0284c7;
+            padding: 8px 18px; border-radius: 20px; color: #fff;
+            font-size: 13px; font-weight: bold; z-index: 1000;
+            white-space: nowrap; pointer-events: none;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
             transition: all 0.3s ease;
-            white-space: nowrap;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- Badge Info Status -->
     <div id="badge">🏎️ Menyiapkan Kamera AR...</div>
 
-    <!-- Scene AR (missTolerance: 20 agar mobil stabil dan tahan lama saat kamera bergoyang) -->
+    <!-- Scene AR (missTolerance: 30 agar stabil dan tahan lama saat kamera bergoyang) -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; warmupTolerance: 1; missTolerance: 5; filterMinCF: 0.0001; filterBeta: 10;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 30; warmupTolerance: 1;" 
+        color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- Pencahayaan -->
-        <a-light type="ambient" intensity="1.6"></a-light>
-        <a-light type="directional" position="2 4 3" intensity="2.0"></a-light>
+        <a-light type="ambient" intensity="1.8"></a-light>
+        <a-light type="directional" position="2 4 3" intensity="2.2"></a-light>
         <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
 
         <!-- Target 0: Red Bull RB19 -->
-        <a-entity id="target0" mindar-image-target="targetIndex: 0" tetap-tampil>
-            <a-gltf-model id="model0" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
+        <a-entity id="target0" mindar-image-target="targetIndex: 0" anchor-hold>
+            <a-gltf-model id="model0" rotation="90 0 0" auto-model="length: 0.85"></a-gltf-model>
         </a-entity>
 
         <!-- Target 1: Ferrari F1-75 -->
-        <a-entity id="target1" mindar-image-target="targetIndex: 1" tetap-tampil>
-            <a-gltf-model id="model1" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
+        <a-entity id="target1" mindar-image-target="targetIndex: 1" anchor-hold>
+            <a-gltf-model id="model1" rotation="90 0 0" auto-model="length: 0.85"></a-gltf-model>
         </a-entity>
 
         <!-- Target 2: Ducati Desmosedici -->
-        <a-entity id="target2" mindar-image-target="targetIndex: 2" tetap-tampil>
-            <a-gltf-model id="model2" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
+        <a-entity id="target2" mindar-image-target="targetIndex: 2" anchor-hold>
+            <a-gltf-model id="model2" rotation="90 0 0" auto-model="length: 0.85"></a-gltf-model>
         </a-entity>
 
     </a-scene>
@@ -83,37 +62,31 @@
         const m1 = document.getElementById('model1');
         const m2 = document.getElementById('model2');
 
-        // Membaca parameter dari URL: ?model=ferrari / ?model=ducati / ?model=redbull
         const param = (new URLSearchParams(window.location.search).get('model') || '').toLowerCase();
 
         if (param === 'ferrari' || param === 'f1-75') {
             badge.innerText = '🏎️ Ferrari F1-75 (Arahkan ke Kartu)';
             badge.style.borderColor = '#e11d48';
 
-            // Kunci: Pasang Ferrari ke Target 1 & 0 agar tidak ada kemungkinan muncul Red Bull
+            // Pasang Ferrari ke Target 1 & 0 agar selalu akurat tanpa Red Bull
             m0.setAttribute('src', './ferarri_f1-75.glb');
-            m0.setAttribute('scale', '0.15 0.15 0.15');
             m1.setAttribute('src', './ferarri_f1-75.glb');
-            m1.setAttribute('scale', '0.15 0.15 0.15');
         } else if (param === 'ducati') {
             badge.innerText = '🏍️ Ducati Desmosedici (Arahkan ke Kartu)';
             badge.style.borderColor = '#f59e0b';
 
             m2.setAttribute('src', './ducati_desmo.glb');
-            m2.setAttribute('scale', '0.26 0.26 0.26');
         } else {
             // Default: Red Bull RB19
             badge.innerText = '🏎️ Red Bull RB19 (Arahkan ke Kartu)';
             badge.style.borderColor = '#0284c7';
 
             m0.setAttribute('src', './redbull_RB19.glb');
-            m0.setAttribute('scale', '0.22 0.22 0.22');
         }
 
-        // Feedback visual saat target terdeteksi
         document.querySelectorAll('a-entity[mindar-image-target]').forEach(t => {
             t.addEventListener('targetFound', () => {
-                badge.innerText = '🏁 Kendaraan Terdeteksi!';
+                badge.innerText = '🏁 Kendaraan Terdeteksi! (Geser layar untuk putar 360°)';
                 badge.style.borderColor = '#22c55e';
             });
         });

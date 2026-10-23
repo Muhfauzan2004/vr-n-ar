@@ -18,6 +18,8 @@
             padding: 8px 18px; border-radius: 20px; color: #fff;
             font-size: 13px; font-weight: bold; z-index: 1000;
             white-space: nowrap; pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
         }
     </style>
 </head>
@@ -28,17 +30,17 @@
 
     <!-- Scene AR khusus Ducati Desmosedici -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; warmupTolerance: 1; missTolerance: 5; filterMinCF: 0.0001; filterBeta: 10;" 
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 30; warmupTolerance: 1;" 
         color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <a-light type="ambient" intensity="1.6"></a-light>
-        <a-light type="directional" position="2 4 3" intensity="2.0"></a-light>
+        <a-light type="ambient" intensity="1.8"></a-light>
+        <a-light type="directional" position="2 4 3" intensity="2.2"></a-light>
         <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
 
-        <a-entity mindar-image-target="targetIndex: 2" tetap-tampil>
-            <a-gltf-model src="./ducati_desmo.glb" position="0 0 0.05" rotation="90 0 0" scale="0.26 0.26 0.26"></a-gltf-model>
+        <a-entity mindar-image-target="targetIndex: 2" anchor-hold>
+            <a-gltf-model src="./ducati_desmo.glb" rotation="90 0 0" auto-model="length: 0.85"></a-gltf-model>
         </a-entity>
 
     </a-scene>
@@ -47,7 +49,7 @@
         const badge = document.getElementById('badge');
         document.querySelectorAll('a-entity[mindar-image-target]').forEach(t => {
             t.addEventListener('targetFound', () => {
-                badge.innerText = '🏁 Ducati MotoGP Terdeteksi!';
+                badge.innerText = '🏁 Ducati MotoGP Aktif! (Geser layar untuk putar 360°)';
                 badge.style.borderColor = '#22c55e';
             });
         });
