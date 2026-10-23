@@ -11,6 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
 
+    <!-- Preload 3D Models in Background for Instant (0ms) Appearance on Scan -->
+    <link rel="preload" href="./redbull_RB19.glb" as="fetch" crossorigin="anonymous">
+    <link rel="preload" href="./ferarri_f1-75.glb" as="fetch" crossorigin="anonymous">
+    <link rel="preload" href="./ducati_desmo.glb" as="fetch" crossorigin="anonymous">
+
     <!-- Model Viewer & jsQR Library -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -58,9 +63,9 @@
         }
 
         /* ========================================================
-           2. AUGMENTED REALITY 3D OVERLAY (DIRECTLY OVER CAMERA)
+           2. PRELOADED TRANSPARENT 3D MODEL VIEWERS (0MS INSTANT)
         ======================================================== */
-        #ar-viewer {
+        .ar-model-viewer {
             position: fixed;
             inset: 0;
             width: 100%;
@@ -68,8 +73,17 @@
             z-index: 10;
             background: transparent !important;
             --poster-color: transparent !important;
-            display: none; /* Muncul hanya setelah scan QR berhasil */
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
             outline: none;
+        }
+
+        .ar-model-viewer.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
         }
 
         /* ========================================================
@@ -207,30 +221,24 @@
         }
 
         /* ========================================================
-           4. CONTROLS WHEN MODEL IS VISIBLE (360° INSPECTION)
+           4. TOP BAR WHEN MODEL IS ACTIVE (CLEAN VIEW - NO BOTTOM BUTTONS)
         ======================================================== */
         #ar-ui-overlay {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            right: 0;
             z-index: 25;
             display: none; /* Muncul bersama model 3D */
-            flex-direction: column;
+            padding: 18px 20px;
             justify-content: space-between;
             align-items: center;
+            background: linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%);
             pointer-events: none;
         }
 
         #ar-ui-overlay > * {
             pointer-events: auto;
-        }
-
-        .ar-top-bar {
-            width: 100%;
-            padding: 18px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
         }
 
         .reset-scan-btn {
@@ -276,62 +284,6 @@
             font-size: 0.7rem;
             color: #38bdf8;
             font-weight: 600;
-        }
-
-        /* Bottom Inspection Buttons (360° Sudut Pandang) */
-        .ar-bottom-controls {
-            width: 100%;
-            padding: 12px 16px 24px 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
-        }
-
-        .inspect-angle-bar {
-            display: flex;
-            gap: 6px;
-            background: rgba(15, 23, 42, 0.92);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 6px 10px;
-            border-radius: 30px;
-            backdrop-filter: blur(14px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
-            max-width: 95%;
-            overflow-x: auto;
-        }
-
-        .angle-btn {
-            background: transparent;
-            border: none;
-            color: #cbd5e1;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.2s;
-        }
-
-        .angle-btn:active {
-            background: rgba(56, 189, 248, 0.3);
-            color: #fff;
-            transform: scale(0.95);
-        }
-
-        .gesture-tip {
-            font-size: 0.74rem;
-            color: #cbd5e1;
-            background: rgba(15, 23, 42, 0.75);
-            padding: 5px 14px;
-            border-radius: 14px;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         /* Success Toast */
@@ -420,9 +372,37 @@
     <video id="camera-video" playsinline autoplay muted></video>
     <canvas id="scan-canvas"></canvas>
 
-    <!-- 2. Transparent 3D Model Viewer directly over the live camera -->
-    <model-viewer id="ar-viewer"
-        src=""
+    <!-- 2. Transparent 3D Model Viewers (Preloaded in Memory for 0ms Instant Display) -->
+    <model-viewer id="mv-redbull"
+        class="ar-model-viewer"
+        src="./redbull_RB19.glb"
+        loading="eager"
+        camera-controls
+        auto-rotate
+        rotation-per-second="25deg"
+        shadow-intensity="1.6"
+        shadow-softness="0.7"
+        exposure="1.0"
+        interaction-prompt="none">
+    </model-viewer>
+
+    <model-viewer id="mv-ferrari"
+        class="ar-model-viewer"
+        src="./ferarri_f1-75.glb"
+        loading="eager"
+        camera-controls
+        auto-rotate
+        rotation-per-second="25deg"
+        shadow-intensity="1.6"
+        shadow-softness="0.7"
+        exposure="1.0"
+        interaction-prompt="none">
+    </model-viewer>
+
+    <model-viewer id="mv-ducati"
+        class="ar-model-viewer"
+        src="./ducati_desmo.glb"
+        loading="eager"
         camera-controls
         auto-rotate
         rotation-per-second="25deg"
@@ -459,31 +439,14 @@
         </div>
     </div>
 
-    <!-- 4. UI Controls When Model is Active in Live Camera AR -->
+    <!-- 4. Clean Top Bar When Model is Active (No bottom buttons at all) -->
     <div id="ar-ui-overlay">
-        <!-- Top Bar: Reset / Scan Next Model -->
-        <div class="ar-top-bar">
-            <button class="reset-scan-btn" onclick="resetToScanner()">
-                🔍 Scan Model Lain
-            </button>
-            <div class="active-model-badge" id="model-badge">
-                <div class="badge-title" id="badge-title">Red Bull RB19</div>
-                <div class="badge-category" id="badge-cat">Formula 1</div>
-            </div>
-        </div>
-
-        <!-- Bottom Bar: 360° Inspection Buttons -->
-        <div class="ar-bottom-controls">
-            <div class="gesture-tip">
-                👆 Geser layar untuk putar 360° dari segala sisi • Cubit untuk zoom
-            </div>
-            <div class="inspect-angle-bar">
-                <button class="angle-btn" onclick="setOrbit('0deg 75deg 105%')">🏎️ Depan</button>
-                <button class="angle-btn" onclick="setOrbit('180deg 75deg 105%')">🔄 Belakang</button>
-                <button class="angle-btn" onclick="setOrbit('90deg 75deg 105%')">📐 Samping</button>
-                <button class="angle-btn" onclick="setOrbit('0deg 10deg 105%')">🔝 Atas</button>
-                <button class="angle-btn" id="btn-toggle-rotate" onclick="toggleAutoRotate()">⏸️ Putar</button>
-            </div>
+        <button class="reset-scan-btn" onclick="resetToScanner()">
+            🔍 Scan Model Lain
+        </button>
+        <div class="active-model-badge" id="model-badge">
+            <div class="badge-title" id="badge-title">Red Bull RB19</div>
+            <div class="badge-category" id="badge-cat">Formula 1</div>
         </div>
     </div>
 
@@ -503,21 +466,25 @@
             'redbull': {
                 name: 'Red Bull Racing RB19',
                 cat: 'Oracle Red Bull • Formula 1',
-                file: './redbull_RB19.glb',
                 color: '#0284c7'
             },
             'ferrari': {
                 name: 'Ferrari F1-75',
                 cat: 'Scuderia Ferrari • Formula 1',
-                file: './ferarri_f1-75.glb',
                 color: '#e11d48'
             },
             'ducati': {
                 name: 'Ducati Desmosedici GP',
                 cat: 'Ducati Lenovo • MotoGP',
-                file: './ducati_desmo.glb',
                 color: '#f59e0b'
             }
+        };
+
+        // Status Preload Cache di Memori GPU
+        const modelLoadedState = {
+            'redbull': false,
+            'ferrari': false,
+            'ducati': false
         };
 
         let currentActiveModel = null;
@@ -531,13 +498,26 @@
         const video = document.getElementById('camera-video');
         const canvas = document.getElementById('scan-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const arViewer = document.getElementById('ar-viewer');
         const scannerOverlay = document.getElementById('scanner-overlay');
         const arUiOverlay = document.getElementById('ar-ui-overlay');
         const badgeTitle = document.getElementById('badge-title');
         const badgeCat = document.getElementById('badge-cat');
         const modelBadge = document.getElementById('model-badge');
-        const btnToggleRotate = document.getElementById('btn-toggle-rotate');
+
+        // Pantau status preload masing-masing model
+        ['redbull', 'ferrari', 'ducati'].forEach(k => {
+            const mv = document.getElementById(`mv-${k}`);
+            if (mv) {
+                mv.addEventListener('load', () => {
+                    modelLoadedState[k] = true;
+                    console.log(`✅ Model ${k} siap di memori GPU!`);
+                    if (currentActiveModel === k) {
+                        badgeTitle.innerText = VEHICLES[k].name;
+                        badgeCat.innerText = VEHICLES[k].cat;
+                    }
+                });
+            }
+        });
 
         // Suara Beep saat QR Terbaca
         function playBeep() {
@@ -626,7 +606,6 @@
 
                 if (code && code.data) {
                     const now = Date.now();
-                    // Cegah spam trigger jika QR yang sama terdeteksi berulang cepat
                     if (code.data !== lastScannedText || (now - lastScanTime) > 3000) {
                         lastScannedText = code.data;
                         lastScanTime = now;
@@ -659,7 +638,7 @@
             }
         }
 
-        // Menampilkan Model 3D Langsung di Layar Kamera (Live AR)
+        // Menampilkan Model 3D Secara Instan (0ms) di Layar Kamera Langsung
         function displayModelInLiveAR(key) {
             if (!VEHICLES[key]) return;
             currentActiveModel = key;
@@ -668,33 +647,41 @@
             // 1. Sembunyikan Kotak Bidik Scanner
             scannerOverlay.style.display = 'none';
 
-            // 2. Pasang Model 3D di model-viewer transparan di atas kamera langsung
-            arViewer.src = data.file;
-            arViewer.style.display = 'block';
+            // 2. Nonaktifkan model lainnya agar tidak ada penumpukan
+            document.querySelectorAll('.ar-model-viewer').forEach(el => {
+                el.classList.remove('active');
+            });
 
-            // 3. Reset Sudut Pandang Awal
-            setOrbit('0deg 75deg 105%');
-            arViewer.autoRotate = true;
-            btnToggleRotate.innerText = '⏸️ Putar';
+            // 3. Aktifkan model yang terdeteksi seketika (Instant tanpa download ulang)
+            const targetViewer = document.getElementById(`mv-${key}`);
+            if (targetViewer) {
+                targetViewer.classList.add('active');
+                targetViewer.cameraOrbit = '0deg 75deg 105%';
+                targetViewer.autoRotate = true;
+            }
 
-            // 4. Update Badge Nama Model
-            badgeTitle.innerText = data.name;
-            badgeCat.innerText = data.cat;
+            // 4. Update Badge di atas
+            if (modelLoadedState[key]) {
+                badgeTitle.innerText = data.name;
+                badgeCat.innerText = data.cat;
+            } else {
+                badgeTitle.innerText = `Memuat ${data.name}...`;
+                badgeCat.innerText = 'Menyiapkan 3D...';
+            }
             modelBadge.style.borderColor = data.color;
 
-            // 5. Tampilkan Kontrol Sudut Pandang 360°
+            // 5. Tampilkan Top Bar
             arUiOverlay.style.display = 'flex';
 
-            // Kamera tetap menyala di latar belakang (Background video live)!
-            // Tetap lakukan scan halus di latar agar jika diarahkan ke QR lain langsung ganti
             isScanning = true;
         }
 
         // Kembali ke Mode Scan / Scan Model Lain
         function resetToScanner() {
             currentActiveModel = null;
-            arViewer.style.display = 'none';
-            arViewer.src = '';
+            document.querySelectorAll('.ar-model-viewer').forEach(el => {
+                el.classList.remove('active');
+            });
             arUiOverlay.style.display = 'none';
             scannerOverlay.style.display = 'flex';
             lastScannedText = '';
@@ -704,17 +691,6 @@
             const url = new URL(window.location);
             url.searchParams.delete('model');
             window.history.replaceState({}, '', url);
-        }
-
-        // Atur Sudut Pandang 360°
-        function setOrbit(orbitStr) {
-            arViewer.cameraOrbit = orbitStr;
-        }
-
-        // Nyalakan / Matikan Putaran Otomatis
-        function toggleAutoRotate() {
-            arViewer.autoRotate = !arViewer.autoRotate;
-            btnToggleRotate.innerText = arViewer.autoRotate ? '⏸️ Putar' : '▶️ Putar';
         }
 
         // Inisialisasi Saat Halaman Dimuat
