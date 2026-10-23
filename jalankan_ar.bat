@@ -1,14 +1,17 @@
 @echo off
-title Menjalankan AR Red Bull RB19 Server
-echo ====================================================
-echo   MEMULAI SERVER AR RED BULL RB19 (SEMESTER 5 TUGAS)
-echo ====================================================
+title Scanner 3D Racing Showcase
+cls
+echo ========================================================
+echo    SCANNER KAMERA 3D RACING SHOWCASE
+echo    Red Bull RB19 - Ferrari F1-75 - Ducati Desmosedici
+echo ========================================================
 echo.
-echo Server akan aktif di port 8080.
+echo [1] Menjalankan Server Lokal di Port 8080...
+echo [2] Membuka Peramban ke Scanner Kamera...
 echo.
-echo [1] Buka di Laptop: http://localhost:8080
-echo.
-echo Tekan CTRL + C di jendela ini untuk mematikan server.
-echo.
+
+start "" "http://localhost:8080/index.html"
+start "" "http://localhost:8080/lembar_ar.html"
+
 python -m http.server 8080
 pause

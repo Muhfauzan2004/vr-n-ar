@@ -3,112 +3,950 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Racing Showcase (Red Bull, Ferrari, Ducati)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Scanner 3D Racing Showcase</title>
 
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <script src="./ar.js"></script>
+    <!-- Google Font & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Model Viewer & jsQR Library -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, sans-serif; user-select: none; }
-        #badge {
-            position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.92); border: 2px solid #0284c7;
-            padding: 8px 18px; border-radius: 20px; color: #fff;
-            font-size: 13px; font-weight: bold; z-index: 1000;
-            white-space: nowrap; pointer-events: none;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); transition: all 0.3s ease;
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: rgba(17, 24, 39, 0.85);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --accent-redbull: #0284c7;
+            --accent-ferrari: #e11d48;
+            --accent-ducati: #f59e0b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
         }
-        #controls {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 8px; z-index: 1000;
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
-        #controls button {
-            background: rgba(15, 23, 42, 0.85); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 9px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-            cursor: pointer; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            transition: all 0.2s ease;
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            user-select: none;
         }
-        #controls button:active { transform: scale(0.95); background: #0284c7; }
+
+        /* =========================================
+           VIEW 1: CAMERA SCANNER
+        ========================================= */
+        #scanner-view {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background: #000;
+            z-index: 10;
+        }
+
+        #camera-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        #scan-canvas {
+            display: none;
+        }
+
+        /* Top Header Bar */
+        .scanner-header {
+            position: relative;
+            z-index: 20;
+            width: 100%;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+        }
+
+        .brand-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid var(--card-border);
+            padding: 8px 14px;
+            border-radius: 30px;
+            backdrop-filter: blur(8px);
+        }
+
+        .brand-badge span {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid var(--card-border);
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Scanner Reticle / Viewfinder */
+        .scanner-body {
+            position: relative;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .viewfinder-box {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            border-radius: 24px;
+            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.55);
+            overflow: hidden;
+        }
+
+        /* 4 Reticle Corners */
+        .corner {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border: 4px solid #38bdf8;
+        }
+        .top-left { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 18px 0 0 0; }
+        .top-right { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 18px 0 0; }
+        .bottom-left { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 18px; }
+        .bottom-right { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 18px 0; }
+
+        /* Laser Scan Line */
+        .scan-laser {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #38bdf8, #0284c7, #38bdf8, transparent);
+            box-shadow: 0 0 12px #38bdf8;
+            animation: scanMove 2.2s ease-in-out infinite alternate;
+        }
+
+        @keyframes scanMove {
+            0% { top: 6%; opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { top: 92%; opacity: 0.3; }
+        }
+
+        .scanner-hint {
+            margin-top: 18px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--card-border);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            font-weight: 500;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            animation: pulseHint 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseHint {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        /* Bottom Control Panel */
+        .scanner-footer {
+            position: relative;
+            z-index: 20;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
+        }
+
+        .quick-select-label {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .quick-models {
+            display: flex;
+            gap: 8px;
+            max-width: 100%;
+            overflow-x: auto;
+            padding: 2px;
+        }
+
+        .pill-btn {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .pill-btn:hover, .pill-btn:active {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: #38bdf8;
+            transform: translateY(-1px);
+        }
+
+        .pill-btn.redbull { border-left: 3px solid var(--accent-redbull); }
+        .pill-btn.ferrari { border-left: 3px solid var(--accent-ferrari); }
+        .pill-btn.ducati { border-left: 3px solid var(--accent-ducati); }
+
+
+        /* =========================================
+           VIEW 2: 3D MODEL VIEWER (360° INSPECT)
+        ========================================= */
+        #viewer-view {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            background: radial-gradient(circle at center 40%, #1e293b 0%, #090d16 85%);
+            z-index: 30;
+        }
+
+        /* Top Bar in 3D Viewer */
+        .viewer-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 40;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(9, 13, 22, 0.85) 0%, rgba(9, 13, 22, 0) 100%);
+            pointer-events: none;
+        }
+
+        .viewer-top-bar > * {
+            pointer-events: auto;
+        }
+
+        .back-scan-btn {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s;
+        }
+
+        .back-scan-btn:active {
+            transform: scale(0.95);
+            background: #e11d48;
+        }
+
+        .model-title-badge {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--card-border);
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-align: right;
+            backdrop-filter: blur(10px);
+        }
+
+        .model-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+
+        .model-sub {
+            font-size: 0.7rem;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        /* 3D Canvas Element */
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            outline: none;
+            --poster-color: transparent;
+        }
+
+        /* Built-in AR Launch Button Styling */
+        .ar-floating-btn {
+            position: absolute;
+            top: 75px;
+            right: 18px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 20px rgba(2, 132, 199, 0.4);
+            transition: all 0.2s;
+        }
+
+        .ar-floating-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 360 Inspection Angle Quick Buttons */
+        .inspect-controls {
+            position: absolute;
+            bottom: 85px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 40;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--card-border);
+            padding: 6px 10px;
+            border-radius: 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            max-width: 94%;
+            overflow-x: auto;
+        }
+
+        .angle-btn {
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .angle-btn:hover, .angle-btn:active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .angle-btn.active-btn {
+            background: #38bdf8;
+            color: #090d16;
+            font-weight: 700;
+        }
+
+        /* Bottom Switcher & Gesture Tip */
+        .viewer-bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 40;
+            padding: 10px 16px 20px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(0deg, rgba(9, 13, 22, 0.95) 0%, rgba(9, 13, 22, 0) 100%);
+            pointer-events: none;
+        }
+
+        .viewer-bottom-bar > * {
+            pointer-events: auto;
+        }
+
+        .gesture-hint {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 4px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .vehicle-tabs {
+            display: flex;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--card-border);
+            padding: 4px;
+            border-radius: 25px;
+            backdrop-filter: blur(12px);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+        }
+
+        .tab-btn.active.redbull { background: var(--accent-redbull); }
+        .tab-btn.active.ferrari { background: var(--accent-ferrari); }
+        .tab-btn.active.ducati { background: var(--accent-ducati); }
+
+        /* Notification Toast */
+        #toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #22c55e;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+            transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Error Modal for Camera Denied */
+        #camera-error-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 200;
+            backdrop-filter: blur(6px);
+        }
+
+        .modal-card {
+            background: #111827;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px 20px;
+            max-width: 360px;
+            text-align: center;
+        }
+
+        .modal-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.15rem;
+            color: #f87171;
+        }
+
+        .modal-card p {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin: 0 0 18px 0;
+            line-height: 1.5;
+        }
+
+        .modal-btn {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        /* File input for scanning from image */
+        #file-input {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
 
-    <div id="badge">🏎️ Arahkan Kamera ke Kartu...</div>
-
-    <div id="controls">
-        <button onclick="setAngle(0)">🏎️ Depan</button>
-        <button onclick="setAngle(180)">🔄 Belakang</button>
-        <button id="btn-spin" onclick="toggleSpin()">▶️ Putar 360°</button>
+    <!-- Notification Toast -->
+    <div id="toast">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg">QR Berhasil Dideteksi!</span>
     </div>
 
-    <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 35; warmupTolerance: 1; filterMinCF: 0.0001; filterBeta: 0.001;" 
-        color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <!-- =========================================
+         VIEW 1: CAMERA SCANNER
+    ========================================= -->
+    <div id="scanner-view">
+        <video id="camera-video" playsinline></video>
+        <canvas id="scan-canvas"></canvas>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-light type="ambient" intensity="1.8"></a-light>
-        <a-light type="directional" position="2 4 3" intensity="2.2"></a-light>
-        <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
+        <!-- Top Header -->
+        <div class="scanner-header">
+            <div class="brand-badge">
+                <span>📷 SCANNER 3D</span>
+            </div>
+            <div class="header-actions">
+                <input type="file" id="file-input" accept="image/*">
+                <button class="icon-btn" onclick="document.getElementById('file-input').click()" title="Pilih File Gambar QR">🖼️</button>
+                <button class="icon-btn" id="btn-switch-cam" onclick="switchCamera()" title="Ganti Kamera">🔄</button>
+            </div>
+        </div>
 
-        <!-- Target 0: Red Bull RB19 (atau Ferrari jika dipilih via URL) -->
-        <a-entity id="target0" mindar-image-target="targetIndex: 0">
-            <a-entity class="ar-pivot">
-                <a-gltf-model id="model0" src="./redbull_RB19.glb" position="0 0 0.05" rotation="90 0 0" scale="0.21 0.21 0.21"></a-gltf-model>
-            </a-entity>
-        </a-entity>
+        <!-- Scanner Viewfinder Reticle -->
+        <div class="scanner-body">
+            <div class="viewfinder-box">
+                <div class="corner top-left"></div>
+                <div class="corner top-right"></div>
+                <div class="corner bottom-left"></div>
+                <div class="corner bottom-right"></div>
+                <div class="scan-laser"></div>
+            </div>
+            <div class="scanner-hint">
+                Arahkan ke QR Red Bull, Ferrari, atau Ducati
+            </div>
+        </div>
 
-        <!-- Target 1: Ferrari F1-75 -->
-        <a-entity id="target1" mindar-image-target="targetIndex: 1">
-            <a-entity class="ar-pivot">
-                <a-gltf-model id="model1" src="./ferarri_f1-75.glb" position="0 0 0.05" rotation="90 0 0" scale="0.14 0.14 0.14"></a-gltf-model>
-            </a-entity>
-        </a-entity>
+        <!-- Bottom Selection (Backup / Quick Jump) -->
+        <div class="scanner-footer">
+            <div class="quick-select-label">Atau Langsung Pilih Model 3D:</div>
+            <div class="quick-models">
+                <button class="pill-btn redbull" onclick="loadVehicle('redbull')">
+                    🏎️ Red Bull RB19
+                </button>
+                <button class="pill-btn ferrari" onclick="loadVehicle('ferrari')">
+                    🏎️ Ferrari F1-75
+                </button>
+                <button class="pill-btn ducati" onclick="loadVehicle('ducati')">
+                    🏍️ Ducati MotoGP
+                </button>
+            </div>
+        </div>
+    </div>
 
-        <!-- Target 2: Ducati Desmosedici -->
-        <a-entity id="target2" mindar-image-target="targetIndex: 2">
-            <a-entity class="ar-pivot">
-                <a-gltf-model id="model2" src="./ducati_desmo.glb" position="0 0 0.05" rotation="90 0 0" scale="0.26 0.26 0.26"></a-gltf-model>
-            </a-entity>
-        </a-entity>
 
-    </a-scene>
+    <!-- =========================================
+         VIEW 2: 3D MODEL VIEWER (360° INSPECT)
+    ========================================= -->
+    <div id="viewer-view">
 
+        <!-- Top Navigation -->
+        <div class="viewer-top-bar">
+            <button class="back-scan-btn" onclick="openScanner()">
+                📷 Scan QR Lain
+            </button>
+            <div class="model-title-badge">
+                <div class="model-name" id="view-title">Red Bull RB19</div>
+                <div class="model-sub" id="view-sub">Formula 1 Racing Car</div>
+            </div>
+        </div>
+
+        <!-- Interactive 3D Model Viewer -->
+        <model-viewer id="mv-3d"
+            src="./redbull_RB19.glb"
+            camera-controls
+            auto-rotate
+            rotation-per-second="25deg"
+            shadow-intensity="1.5"
+            shadow-softness="0.8"
+            exposure="1.0"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            interaction-prompt="none">
+            
+            <button slot="ar-button" class="ar-floating-btn">
+                📱 Lihat di Meja (AR)
+            </button>
+        </model-viewer>
+
+        <!-- 360 Inspection Buttons (Depan, Belakang, Samping, Atas, Putar) -->
+        <div class="inspect-controls">
+            <button class="angle-btn" onclick="setOrbit('0deg 75deg 105%')">🏎️ Depan</button>
+            <button class="angle-btn" onclick="setOrbit('180deg 75deg 105%')">🔄 Belakang</button>
+            <button class="angle-btn" onclick="setOrbit('90deg 75deg 105%')">📐 Samping</button>
+            <button class="angle-btn" onclick="setOrbit('0deg 10deg 105%')">🔝 Atas</button>
+            <button class="angle-btn" id="btn-auto-rotate" onclick="toggleAutoRotate()">⏸️ Putar</button>
+        </div>
+
+        <!-- Bottom Model Switcher & Tips -->
+        <div class="viewer-bottom-bar">
+            <div class="gesture-hint">
+                👆 Geser untuk putar 360° dari segala sisi • Cubit untuk zoom
+            </div>
+            <div class="vehicle-tabs">
+                <button class="tab-btn redbull" id="tab-redbull" onclick="loadVehicle('redbull')">Red Bull</button>
+                <button class="tab-btn ferrari" id="tab-ferrari" onclick="loadVehicle('ferrari')">Ferrari</button>
+                <button class="tab-btn ducati" id="tab-ducati" onclick="loadVehicle('ducati')">Ducati</button>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- Camera Permission Error Modal -->
+    <div id="camera-error-modal">
+        <div class="modal-card">
+            <h3>Izin Kamera Diperlukan</h3>
+            <p>Untuk menggunakan fitur pemindai QR secara langsung, izinkan akses kamera di peramban Anda. Anda juga dapat memilih model secara manual di bawah.</p>
+            <button class="modal-btn" onclick="startScannerCamera()">🔄 Coba Lagi</button>
+            <div style="margin-top: 14px;">
+                <button class="pill-btn redbull" style="width: 100%; justify-content: center; margin-bottom: 8px;" onclick="closeModalAndLoad('redbull')">Buka Red Bull RB19</button>
+                <button class="pill-btn ferrari" style="width: 100%; justify-content: center; margin-bottom: 8px;" onclick="closeModalAndLoad('ferrari')">Buka Ferrari F1-75</button>
+                <button class="pill-btn ducati" style="width: 100%; justify-content: center;" onclick="closeModalAndLoad('ducati')">Buka Ducati MotoGP</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Engine Logic Script -->
     <script>
-        const badge = document.getElementById('badge');
-        const m0 = document.getElementById('model0');
-        const param = (new URLSearchParams(window.location.search).get('model') || '').toLowerCase();
+        // Database Model Kendaraan
+        const VEHICLES = {
+            'redbull': {
+                name: 'Red Bull Racing RB19',
+                sub: 'Oracle Red Bull Racing • Formula 1',
+                file: './redbull_RB19.glb',
+                theme: '#0284c7'
+            },
+            'ferrari': {
+                name: 'Ferrari F1-75',
+                sub: 'Scuderia Ferrari • Formula 1',
+                file: './ferarri_f1-75.glb',
+                theme: '#e11d48'
+            },
+            'ducati': {
+                name: 'Ducati Desmosedici GP',
+                sub: 'Ducati Lenovo Team • MotoGP',
+                file: './ducati_desmo.glb',
+                theme: '#f59e0b'
+            }
+        };
 
-        if (param === 'ferrari' || param === 'f1-75') {
-            m0.setAttribute('src', './ferarri_f1-75.glb');
-            m0.setAttribute('scale', '0.14 0.14 0.14');
-        } else if (param === 'ducati') {
-            m0.setAttribute('src', './ducati_desmo.glb');
-            m0.setAttribute('scale', '0.26 0.26 0.26');
+        let currentVehicleKey = 'redbull';
+        let videoStream = null;
+        let isScanning = false;
+        let currentFacingMode = 'environment'; // default rear camera
+        let audioCtx = null;
+
+        const scannerView = document.getElementById('scanner-view');
+        const viewerView = document.getElementById('viewer-view');
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('scan-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const mv = document.getElementById('mv-3d');
+        const viewTitle = document.getElementById('view-title');
+        const viewSub = document.getElementById('view-sub');
+        const btnAutoRotate = document.getElementById('btn-auto-rotate');
+
+        // Play Beep Sound on QR detected
+        function playSuccessBeep() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+                osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.16);
+            } catch (e) {
+                // Audio might be blocked before first user gesture
+            }
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
+            }
         }
 
-        document.getElementById('target0').addEventListener('targetFound', () => {
-            badge.innerText = (param === 'ferrari') ? '🏁 Ferrari F1-75 Aktif!' : (param === 'ducati') ? '🏁 Ducati MotoGP Aktif!' : '🏁 Red Bull RB19 Aktif!';
-            badge.style.borderColor = '#22c55e';
+        // Show toast notification
+        function showToast(msg, icon = '✅') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').innerText = icon;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // Camera Management
+        async function startScannerCamera() {
+            document.getElementById('camera-error-modal').style.display = 'none';
+            stopScannerCamera();
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = videoStream;
+                video.setAttribute('playsinline', true);
+                await video.play();
+                isScanning = true;
+                requestAnimationFrame(scanLoop);
+            } catch (err) {
+                console.warn('Camera access error:', err);
+                document.getElementById('camera-error-modal').style.display = 'flex';
+            }
+        }
+
+        function stopScannerCamera() {
+            isScanning = false;
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            if (video.srcObject) {
+                video.srcObject = null;
+            }
+        }
+
+        function switchCamera() {
+            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+            startScannerCamera();
+        }
+
+        // QR Detection Loop
+        function scanLoop() {
+            if (!isScanning) return;
+
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'dontInvert'
+                });
+
+                if (code && code.data) {
+                    processQRResult(code.data);
+                    return; // Stop scan loop once detected
+                }
+            }
+
+            requestAnimationFrame(scanLoop);
+        }
+
+        // Parse QR Content and route to corresponding model
+        function processQRResult(qrText) {
+            console.log('Scanned QR:', qrText);
+            const lower = qrText.toLowerCase();
+
+            let matchedKey = null;
+            if (lower.includes('redbull') || lower.includes('rb19')) {
+                matchedKey = 'redbull';
+            } else if (lower.includes('ferrari') || lower.includes('f1-75')) {
+                matchedKey = 'ferrari';
+            } else if (lower.includes('ducati') || lower.includes('desmo')) {
+                matchedKey = 'ducati';
+            }
+
+            if (matchedKey) {
+                playSuccessBeep();
+                showToast(`🏁 ${VEHICLES[matchedKey].name} Ditemukan!`);
+                loadVehicle(matchedKey);
+            } else {
+                showToast(`QR terbaca: ${qrText.slice(0, 30)}...`, '🔍');
+                // Resume scanning after slight delay
+                setTimeout(() => {
+                    if (isScanning) requestAnimationFrame(scanLoop);
+                }, 1200);
+            }
+        }
+
+        // Support selecting image file directly
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imgData.data, imgData.width, imgData.height);
+                    if (code && code.data) {
+                        processQRResult(code.data);
+                    } else {
+                        showToast('Tidak ada QR Code yang terdeteksi di foto ini.', '⚠️');
+                    }
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
         });
 
-        document.getElementById('target1').addEventListener('targetFound', () => {
-            badge.innerText = '🏁 Ferrari F1-75 Aktif!';
-            badge.style.borderColor = '#22c55e';
-        });
+        // Switch to 3D Viewer View
+        function loadVehicle(key) {
+            if (!VEHICLES[key]) return;
+            currentVehicleKey = key;
+            const data = VEHICLES[key];
 
-        document.getElementById('target2').addEventListener('targetFound', () => {
-            badge.innerText = '🏁 Ducati MotoGP Aktif!';
-            badge.style.borderColor = '#22c55e';
-        });
+            stopScannerCamera();
+            scannerView.style.display = 'none';
+            viewerView.style.display = 'flex';
 
-        document.querySelectorAll('a-entity[mindar-image-target]').forEach(t => {
-            t.addEventListener('targetLost', () => {
-                badge.innerText = '🔍 Mencari Kartu Target...';
-                badge.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            });
+            viewTitle.innerText = data.name;
+            viewSub.innerText = data.sub;
+            mv.src = data.file;
+
+            // Reset camera orbit to standard front view
+            setOrbit('0deg 75deg 105%');
+            mv.autoRotate = true;
+            btnAutoRotate.innerText = '⏸️ Putar';
+
+            // Update Tab styles
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.className = 'tab-btn');
+            const activeTab = document.getElementById(`tab-${key}`);
+            if (activeTab) {
+                activeTab.className = `tab-btn active ${key}`;
+            }
+
+            // Update URL without reloading page
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('model', key);
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Return to Camera Scanner
+        function openScanner() {
+            viewerView.style.display = 'none';
+            scannerView.style.display = 'flex';
+            startScannerCamera();
+
+            // Clear URL param
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('model');
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        function closeModalAndLoad(key) {
+            document.getElementById('camera-error-modal').style.display = 'none';
+            loadVehicle(key);
+        }
+
+        // Quick Orbit Angle Control
+        function setOrbit(orbitStr) {
+            mv.cameraOrbit = orbitStr;
+        }
+
+        // Toggle Auto Rotation
+        function toggleAutoRotate() {
+            mv.autoRotate = !mv.autoRotate;
+            btnAutoRotate.innerText = mv.autoRotate ? '⏸️ Putar' : '▶️ Putar';
+        }
+
+        // Initial Load Check
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const modelParam = (urlParams.get('model') || '').toLowerCase();
+
+            if (modelParam && VEHICLES[modelParam]) {
+                // If accessed via QR link directly (e.g. ?model=ferrari)
+                loadVehicle(modelParam);
+            } else {
+                // Default: Start Camera Scanner
+                startScannerCamera();
+            }
         });
     </script>
 

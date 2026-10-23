@@ -1,4 +1,7 @@
-redbull_RB19_original.glb
-ferrari_f1_original.glb
-ducati_desmo_original.glb
-ferarri_f1-75_original.glb
+# Local temporary files
+.vscode/
+.idea/
+*.log
+
+# Keep only active compressed GLBs
+*_original.glb
