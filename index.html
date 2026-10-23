@@ -9,6 +9,7 @@
     <!-- Library A-Frame & MindAR -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <script src="./ar.js"></script>
 
     <style>
         body {
@@ -46,7 +47,7 @@
 
     <!-- Scene AR (missTolerance: 20 agar mobil stabil dan tahan lama saat kamera bergoyang) -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 20; warmupTolerance: 2; filterMinCF: 0.0001; filterBeta: 0.001;" 
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; warmupTolerance: 1; missTolerance: 5; filterMinCF: 0.0001; filterBeta: 10;" 
         color-space="sRGB" 
         renderer="colorManagement: true" 
         vr-mode-ui="enabled: false" 
@@ -60,17 +61,17 @@
         <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
 
         <!-- Target 0: Red Bull RB19 -->
-        <a-entity id="target0" mindar-image-target="targetIndex: 0">
+        <a-entity id="target0" mindar-image-target="targetIndex: 0" tetap-tampil>
             <a-gltf-model id="model0" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
         </a-entity>
 
         <!-- Target 1: Ferrari F1-75 -->
-        <a-entity id="target1" mindar-image-target="targetIndex: 1">
+        <a-entity id="target1" mindar-image-target="targetIndex: 1" tetap-tampil>
             <a-gltf-model id="model1" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
         </a-entity>
 
         <!-- Target 2: Ducati Desmosedici -->
-        <a-entity id="target2" mindar-image-target="targetIndex: 2">
+        <a-entity id="target2" mindar-image-target="targetIndex: 2" tetap-tampil>
             <a-gltf-model id="model2" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
         </a-entity>
 
