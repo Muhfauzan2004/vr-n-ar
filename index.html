@@ -11,47 +11,67 @@
     <script src="./ar.js"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, sans-serif; user-select: none; }
         #badge {
             position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.9); border: 2px solid #0284c7;
+            background: rgba(15, 23, 42, 0.92); border: 2px solid #0284c7;
             padding: 8px 18px; border-radius: 20px; color: #fff;
             font-size: 13px; font-weight: bold; z-index: 1000;
             white-space: nowrap; pointer-events: none;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); transition: all 0.3s ease;
         }
+        #controls {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 1000;
+        }
+        #controls button {
+            background: rgba(15, 23, 42, 0.85); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 9px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            cursor: pointer; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+        #controls button:active { transform: scale(0.95); background: #0284c7; }
     </style>
 </head>
 
 <body>
 
-    <div id="badge">🏎️ Menyiapkan Kamera AR...</div>
+    <div id="badge">🏎️ Arahkan Kamera ke Kartu...</div>
 
-    <!-- Scene AR (missTolerance: 30 agar stabil dan tahan lama saat kamera bergoyang) -->
+    <div id="controls">
+        <button onclick="setAngle(0)">🏎️ Depan</button>
+        <button onclick="setAngle(180)">🔄 Belakang</button>
+        <button id="btn-spin" onclick="toggleSpin()">▶️ Putar 360°</button>
+    </div>
+
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 30; warmupTolerance: 1;" 
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 35; warmupTolerance: 1; filterMinCF: 0.0001; filterBeta: 0.001;" 
         color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
         <a-light type="ambient" intensity="1.8"></a-light>
         <a-light type="directional" position="2 4 3" intensity="2.2"></a-light>
         <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
 
-        <!-- Target 0: Red Bull RB19 -->
-        <a-entity id="target0" mindar-image-target="targetIndex: 0" anchor-hold>
-            <a-gltf-model id="model0" rotation="90 0 0" auto-model="length: 0.85"></a-gltf-model>
+        <!-- Target 0: Red Bull RB19 (atau Ferrari jika dipilih via URL) -->
+        <a-entity id="target0" mindar-image-target="targetIndex: 0">
+            <a-entity class="ar-pivot">
+                <a-gltf-model id="model0" src="./redbull_RB19.glb" position="0 0 0.05" rotation="90 0 0" scale="0.21 0.21 0.21"></a-gltf-model>
+            </a-entity>
         </a-entity>
 
         <!-- Target 1: Ferrari F1-75 -->
-        <a-entity id="target1" mindar-image-target="targetIndex: 1" anchor-hold>
-            <a-gltf-model id="model1" rotation="90 0 0" auto-model="length: 0.85"></a-gltf-model>
+        <a-entity id="target1" mindar-image-target="targetIndex: 1">
+            <a-entity class="ar-pivot">
+                <a-gltf-model id="model1" src="./ferarri_f1-75.glb" position="0 0 0.05" rotation="90 0 0" scale="0.14 0.14 0.14"></a-gltf-model>
+            </a-entity>
         </a-entity>
 
         <!-- Target 2: Ducati Desmosedici -->
-        <a-entity id="target2" mindar-image-target="targetIndex: 2" anchor-hold>
-            <a-gltf-model id="model2" rotation="90 0 0" auto-model="length: 0.85"></a-gltf-model>
+        <a-entity id="target2" mindar-image-target="targetIndex: 2">
+            <a-entity class="ar-pivot">
+                <a-gltf-model id="model2" src="./ducati_desmo.glb" position="0 0 0.05" rotation="90 0 0" scale="0.26 0.26 0.26"></a-gltf-model>
+            </a-entity>
         </a-entity>
 
     </a-scene>
@@ -59,35 +79,35 @@
     <script>
         const badge = document.getElementById('badge');
         const m0 = document.getElementById('model0');
-        const m1 = document.getElementById('model1');
-        const m2 = document.getElementById('model2');
-
         const param = (new URLSearchParams(window.location.search).get('model') || '').toLowerCase();
 
         if (param === 'ferrari' || param === 'f1-75') {
-            badge.innerText = '🏎️ Ferrari F1-75 (Arahkan ke Kartu)';
-            badge.style.borderColor = '#e11d48';
-
-            // Pasang Ferrari ke Target 1 & 0 agar selalu akurat tanpa Red Bull
             m0.setAttribute('src', './ferarri_f1-75.glb');
-            m1.setAttribute('src', './ferarri_f1-75.glb');
+            m0.setAttribute('scale', '0.14 0.14 0.14');
         } else if (param === 'ducati') {
-            badge.innerText = '🏍️ Ducati Desmosedici (Arahkan ke Kartu)';
-            badge.style.borderColor = '#f59e0b';
-
-            m2.setAttribute('src', './ducati_desmo.glb');
-        } else {
-            // Default: Red Bull RB19
-            badge.innerText = '🏎️ Red Bull RB19 (Arahkan ke Kartu)';
-            badge.style.borderColor = '#0284c7';
-
-            m0.setAttribute('src', './redbull_RB19.glb');
+            m0.setAttribute('src', './ducati_desmo.glb');
+            m0.setAttribute('scale', '0.26 0.26 0.26');
         }
 
+        document.getElementById('target0').addEventListener('targetFound', () => {
+            badge.innerText = (param === 'ferrari') ? '🏁 Ferrari F1-75 Aktif!' : (param === 'ducati') ? '🏁 Ducati MotoGP Aktif!' : '🏁 Red Bull RB19 Aktif!';
+            badge.style.borderColor = '#22c55e';
+        });
+
+        document.getElementById('target1').addEventListener('targetFound', () => {
+            badge.innerText = '🏁 Ferrari F1-75 Aktif!';
+            badge.style.borderColor = '#22c55e';
+        });
+
+        document.getElementById('target2').addEventListener('targetFound', () => {
+            badge.innerText = '🏁 Ducati MotoGP Aktif!';
+            badge.style.borderColor = '#22c55e';
+        });
+
         document.querySelectorAll('a-entity[mindar-image-target]').forEach(t => {
-            t.addEventListener('targetFound', () => {
-                badge.innerText = '🏁 Kendaraan Terdeteksi! (Geser layar untuk putar 360°)';
-                badge.style.borderColor = '#22c55e';
+            t.addEventListener('targetLost', () => {
+                badge.innerText = '🔍 Mencari Kartu Target...';
+                badge.style.borderColor = 'rgba(255, 255, 255, 0.2)';
             });
         });
     </script>
