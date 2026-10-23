@@ -88,8 +88,9 @@
     <!-- Badge Info Model -->
     <div id="modelBadge">🔍 Arahkan kamera ke Kartu Target</div>
 
+    <!-- filterMinCF & filterBeta untuk kehalusan, missTolerance: 10 agar model tahan lama & tidak mudah hilang -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.001; filterBeta: 1000;" 
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10; warmupTolerance: 3;" 
         color-space="sRGB" 
         renderer="colorManagement: true, physicallyCorrectLights: true" 
         vr-mode-ui="enabled: false" 
@@ -160,11 +161,13 @@
             'ducati':  { src: './ducati_desmo.glb', scale: '0.26 0.26 0.26', name: '🏍️ Ducati Desmosedici', color: '#f59e0b' }
         };
 
-        // 1. JIKA URL MENENTUKAN MODEL SPESIFIK (misal ?model=ferrari saat scan QR Ferrari):
+        // 1. JIKA URL MENENTUKAN MODEL SPESIFIK (misal ?model=ferrari):
         if (selectedModel && modelConfigs[selectedModel]) {
             const config = modelConfigs[selectedModel];
             badge.innerText = config.name + ' (Arahkan ke Kartu)';
             badge.style.borderColor = config.color;
+
+            let lostTimer = null;
 
             targets.forEach(t => {
                 if (!t) return;
@@ -174,26 +177,39 @@
                     m.setAttribute('scale', config.scale);
                 }
                 t.addEventListener('targetFound', () => {
+                    if (lostTimer) {
+                        clearTimeout(lostTimer);
+                        lostTimer = null;
+                    }
                     t.setAttribute('visible', 'true');
                     badge.innerText = config.name + ' Aktif!';
                 });
+
                 t.addEventListener('targetLost', () => {
-                    t.setAttribute('visible', 'false');
-                    badge.innerText = config.name + ' (Arahkan ke Kartu)';
+                    // Toleransi jeda 2.5 detik agar model tetap bertahan lama dan tidak langsung hilang saat tangan bergetar
+                    if (lostTimer) clearTimeout(lostTimer);
+                    lostTimer = setTimeout(() => {
+                        t.setAttribute('visible', 'false');
+                        badge.innerText = config.name + ' (Arahkan ke Kartu)';
+                    }, 2500);
                 });
             });
         } else {
             // 2. JIKA TANPA PARAMETER (Mode Multi-Target / Semua Model):
             const allTargets = [
-                { el: targetRedbull, name: '🏎️ Red Bull RB19', color: '#0284c7' },
-                { el: targetFerrari, name: '🏎️ Ferrari F1-75', color: '#e11d48' },
-                { el: targetDucati, name: '🏍️ Ducati Desmosedici', color: '#f59e0b' }
+                { el: targetRedbull, name: '🏎️ Red Bull RB19', color: '#0284c7', lostTimer: null },
+                { el: targetFerrari, name: '🏎️ Ferrari F1-75', color: '#e11d48', lostTimer: null },
+                { el: targetDucati, name: '🏍️ Ducati Desmosedici', color: '#f59e0b', lostTimer: null }
             ];
 
             allTargets.forEach((item, idx) => {
                 if (!item.el) return;
 
                 item.el.addEventListener('targetFound', () => {
+                    if (item.lostTimer) {
+                        clearTimeout(item.lostTimer);
+                        item.lostTimer = null;
+                    }
                     allTargets.forEach((other, oIdx) => {
                         if (other.el && oIdx !== idx) {
                             other.el.setAttribute('visible', 'false');
@@ -205,9 +221,13 @@
                 });
 
                 item.el.addEventListener('targetLost', () => {
-                    item.el.setAttribute('visible', 'false');
-                    badge.innerText = '🔍 Mencari Kartu Target...';
-                    badge.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                    // Toleransi 2.5 detik
+                    if (item.lostTimer) clearTimeout(item.lostTimer);
+                    item.lostTimer = setTimeout(() => {
+                        item.el.setAttribute('visible', 'false');
+                        badge.innerText = '🔍 Mencari Kartu Target...';
+                        badge.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                    }, 2500);
                 });
             });
         }
