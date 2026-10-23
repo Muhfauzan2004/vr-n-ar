@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
 
-    <!-- Preload 3D Models in Background for Instant (0ms) Appearance on Scan -->
+    <!-- Preload Lightweight Draco-Compressed 3D Models in Background (Instant 0ms Appearance) -->
     <link rel="preload" href="./redbull_RB19.glb" as="fetch" crossorigin="anonymous">
     <link rel="preload" href="./ferarri_f1-75.glb" as="fetch" crossorigin="anonymous">
     <link rel="preload" href="./mercy-w15.glb" as="fetch" crossorigin="anonymous">
@@ -470,7 +470,7 @@
         </div>
 
         <div class="scanner-footer-hint">
-            Scan QR Red Bull, Ferrari, Mercedes, Aston Martin, atau Ducati untuk memunculkan model 3D di kamera ini
+            Scan QR Red Bull, Ferrari, Mercedes W15, Aston Martin AMR23, atau Ducati untuk memunculkan model 3D di kamera ini
         </div>
     </div>
 
@@ -524,6 +524,18 @@
                 color: '#f59e0b'
             }
         };
+
+        // Normalisasi Semua Alias Parameter & Text Scan
+        function resolveModelKey(raw) {
+            if (!raw) return null;
+            const str = raw.toLowerCase().trim();
+            if (str.includes('redbull') || str.includes('rb19') || str === 'redbull' || str === 'rb19') return 'redbull';
+            if (str.includes('ferrari') || str.includes('f1-75') || str === 'ferrari' || str === 'f1-75') return 'ferrari';
+            if (str.includes('mercedes') || str.includes('mercy') || str.includes('w15') || str === 'mercedes' || str === 'w15') return 'mercedes';
+            if (str.includes('astonmartin') || str.includes('aston') || str.includes('amr23') || str === 'astonmartin' || str === 'amr23') return 'astonmartin';
+            if (str.includes('ducati') || str.includes('desmo') || str === 'ducati' || str === 'desmo') return 'ducati';
+            return null;
+        }
 
         // Status Preload Cache di Memori GPU
         const modelLoadedState = {
@@ -653,7 +665,7 @@
 
                 if (code && code.data) {
                     const now = Date.now();
-                    if (code.data !== lastScannedText || (now - lastScanTime) > 3000) {
+                    if (code.data !== lastScannedText || (now - lastScanTime) > 2500) {
                         lastScannedText = code.data;
                         lastScanTime = now;
                         processScannedQR(code.data);
@@ -667,22 +679,9 @@
         // Memproses Hasil Scan QR
         function processScannedQR(qrText) {
             console.log('QR Terdeteksi:', qrText);
-            const lower = qrText.toLowerCase();
+            const matchedKey = resolveModelKey(qrText);
 
-            let matchedKey = null;
-            if (lower.includes('redbull') || lower.includes('rb19')) {
-                matchedKey = 'redbull';
-            } else if (lower.includes('ferrari') || lower.includes('f1-75')) {
-                matchedKey = 'ferrari';
-            } else if (lower.includes('mercedes') || lower.includes('mercy') || lower.includes('w15')) {
-                matchedKey = 'mercedes';
-            } else if (lower.includes('astonmartin') || lower.includes('aston') || lower.includes('amr23')) {
-                matchedKey = 'astonmartin';
-            } else if (lower.includes('ducati') || lower.includes('desmo')) {
-                matchedKey = 'ducati';
-            }
-
-            if (matchedKey) {
+            if (matchedKey && VEHICLES[matchedKey]) {
                 playBeep();
                 showToast(`🏁 ${VEHICLES[matchedKey].name} Terdeteksi!`);
                 displayModelInLiveAR(matchedKey);
@@ -690,7 +689,8 @@
         }
 
         // Menampilkan Model 3D Secara Instan (0ms) di Layar Kamera Langsung
-        function displayModelInLiveAR(key) {
+        function displayModelInLiveAR(rawKey) {
+            const key = resolveModelKey(rawKey) || rawKey;
             if (!VEHICLES[key]) return;
             currentActiveModel = key;
             const data = VEHICLES[key];
@@ -716,8 +716,8 @@
                 badgeTitle.innerText = data.name;
                 badgeCat.innerText = data.cat;
             } else {
-                badgeTitle.innerText = `Memuat ${data.name}...`;
-                badgeCat.innerText = 'Menyiapkan 3D...';
+                badgeTitle.innerText = data.name;
+                badgeCat.innerText = data.cat;
             }
             modelBadge.style.borderColor = data.color;
 
@@ -748,9 +748,10 @@
             startCamera();
 
             const params = new URLSearchParams(window.location.search);
-            const modelParam = (params.get('model') || '').toLowerCase();
-            if (modelParam && VEHICLES[modelParam]) {
-                displayModelInLiveAR(modelParam);
+            const rawParam = params.get('model') || params.get('mobil') || params.get('car') || '';
+            const matchedKey = resolveModelKey(rawParam);
+            if (matchedKey) {
+                displayModelInLiveAR(matchedKey);
             }
         });
     </script>
