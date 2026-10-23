@@ -4,10 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>AR Racing Showcase (Red Bull, Ferrari F1-75, Ducati)</title>
+    <title>AR Racing Showcase (Red Bull, Ferrari, Ducati)</title>
 
     <!-- Library A-Frame & MindAR -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -18,332 +15,106 @@
             margin: 0;
             overflow: hidden;
             background: #000;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: system-ui, sans-serif;
         }
 
-        #loader {
+        #badge {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0b0f19;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            z-index: 99999;
-            transition: opacity 0.4s ease;
-        }
-
-        .spinner {
-            width: 44px;
-            height: 44px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #e11d48;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loader-text {
-            margin-top: 16px;
-            font-size: 14px;
-            color: #94a3b8;
-            font-weight: 500;
-        }
-
-        /* Top Header & Model Switcher */
-        #topBar {
-            position: fixed;
-            top: 12px;
+            top: 16px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            z-index: 1000;
-            width: 92%;
-            max-width: 420px;
-            pointer-events: none;
-        }
-
-        #modelBadge {
             background: rgba(15, 23, 42, 0.88);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            border: 2px solid #0284c7;
             padding: 8px 18px;
             border-radius: 20px;
             color: #fff;
             font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            font-weight: bold;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-            text-align: center;
-        }
-
-        #modelTabs {
-            display: none; /* Muncul jika dibuka tanpa parameter URL */
-            pointer-events: auto;
-            background: rgba(15, 23, 42, 0.85);
-            padding: 4px;
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            gap: 4px;
-        }
-
-        .tab-btn {
-            background: transparent;
-            border: none;
-            color: #94a3b8;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 6px 12px;
-            border-radius: 16px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .tab-btn.active {
-            background: #e11d48;
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(225, 29, 72, 0.4);
+            white-space: nowrap;
         }
     </style>
-
-    <script>
-        // Komponen Sticky Visibility: Menahan 3D Model tetap muncul selama 3 detik saat kamera goyang / bergetar
-        AFRAME.registerComponent('sticky-visibility', {
-            schema: {
-                timeout: { type: 'number', default: 3000 }
-            },
-            init: function () {
-                this.lostTimer = null;
-                this.isFound = false;
-
-                this.el.addEventListener('targetFound', () => {
-                    this.isFound = true;
-                    if (this.lostTimer) {
-                        clearTimeout(this.lostTimer);
-                        this.lostTimer = null;
-                    }
-                    this.el.object3D.visible = true;
-                });
-
-                this.el.addEventListener('targetLost', () => {
-                    this.isFound = false;
-                    if (this.lostTimer) clearTimeout(this.lostTimer);
-                    this.lostTimer = setTimeout(() => {
-                        if (!this.isFound) {
-                            this.el.object3D.visible = false;
-                        }
-                    }, this.data.timeout);
-                });
-            },
-            tick: function () {
-                // Selama dalam masa jeda toleransi (lostTimer aktif), paksa model tetap tampil
-                if (this.lostTimer && !this.isFound) {
-                    this.el.object3D.visible = true;
-                }
-            }
-        });
-    </script>
 </head>
 
 <body>
 
-    <!-- Indikator Loading Kamera Feed -->
-    <div id="loader">
-        <div class="spinner"></div>
-        <div class="loader-text">Menyiapkan Kamera AR...</div>
-    </div>
+    <!-- Badge Info Status -->
+    <div id="badge">🏎️ Menyiapkan Kamera AR...</div>
 
-    <!-- Bar Atas: Badge Status & Tab Switcher -->
-    <div id="topBar">
-        <div id="modelBadge">🔍 Arahkan kamera ke Kartu Target</div>
-        <div id="modelTabs">
-            <button class="tab-btn" data-model="redbull" onclick="switchModel('redbull')">🏎️ Red Bull</button>
-            <button class="tab-btn" data-model="ferrari" onclick="switchModel('ferrari')">🏎️ Ferrari</button>
-            <button class="tab-btn" data-model="ducati" onclick="switchModel('ducati')">🏍️ Ducati</button>
-        </div>
-    </div>
-
-    <!-- Scene AR MindAR Image Tracking -->
-    <!-- missTolerance: 20 dan warmupTolerance: 2 untuk tracking yang sangat stabil & tahan lama -->
+    <!-- Scene AR (missTolerance: 20 agar mobil stabil dan tahan lama saat kamera bergoyang) -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind?v=20261023; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 20; warmupTolerance: 2;" 
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 20; warmupTolerance: 2; filterMinCF: 0.0001; filterBeta: 0.001;" 
         color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true" 
+        renderer="colorManagement: true" 
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
 
-        <!-- Kamera AR -->
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <!-- Pencahayaan Realistis Optimal -->
-        <a-light type="ambient" intensity="1.6" color="#ffffff"></a-light>
-        <a-light type="directional" position="2 4 3" intensity="2.2" color="#ffffff"></a-light>
-        <a-light type="directional" position="-2 -2 2" intensity="1.2" color="#93c5fd"></a-light>
+        <!-- Pencahayaan -->
+        <a-light type="ambient" intensity="1.6"></a-light>
+        <a-light type="directional" position="2 4 3" intensity="2.0"></a-light>
+        <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
 
-        <!-- TARGET 0: Index 0 dalam targets.mind (marker_redbull.png) -->
-        <a-entity id="target-0" mindar-image-target="targetIndex: 0" sticky-visibility="timeout: 3000">
-            <a-gltf-model id="model-target-0" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
+        <!-- Target 0: Red Bull RB19 -->
+        <a-entity id="target0" mindar-image-target="targetIndex: 0">
+            <a-gltf-model id="model0" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
         </a-entity>
 
-        <!-- TARGET 1: Index 1 dalam targets.mind (marker_ferrari.png) -->
-        <a-entity id="target-1" mindar-image-target="targetIndex: 1" sticky-visibility="timeout: 3000">
-            <a-gltf-model id="model-target-1" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
+        <!-- Target 1: Ferrari F1-75 -->
+        <a-entity id="target1" mindar-image-target="targetIndex: 1">
+            <a-gltf-model id="model1" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
         </a-entity>
 
-        <!-- TARGET 2: Index 2 dalam targets.mind (marker_ducati.png) -->
-        <a-entity id="target-2" mindar-image-target="targetIndex: 2" sticky-visibility="timeout: 3000">
-            <a-gltf-model id="model-target-2" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
+        <!-- Target 2: Ducati Desmosedici -->
+        <a-entity id="target2" mindar-image-target="targetIndex: 2">
+            <a-gltf-model id="model2" position="0 0 0.05" rotation="90 0 0"></a-gltf-model>
         </a-entity>
 
     </a-scene>
 
     <script>
-        const scene = document.querySelector('a-scene');
-        const loader = document.getElementById('loader');
-        const badge = document.getElementById('modelBadge');
-        const modelTabs = document.getElementById('modelTabs');
+        const badge = document.getElementById('badge');
+        const m0 = document.getElementById('model0');
+        const m1 = document.getElementById('model1');
+        const m2 = document.getElementById('model2');
 
-        const target0 = document.getElementById('target-0');
-        const target1 = document.getElementById('target-1');
-        const target2 = document.getElementById('target-2');
+        // Membaca parameter dari URL: ?model=ferrari / ?model=ducati / ?model=redbull
+        const param = (new URLSearchParams(window.location.search).get('model') || '').toLowerCase();
 
-        const model0 = document.getElementById('model-target-0');
-        const model1 = document.getElementById('model-target-1');
-        const model2 = document.getElementById('model-target-2');
+        if (param === 'ferrari' || param === 'f1-75') {
+            badge.innerText = '🏎️ Ferrari F1-75 (Arahkan ke Kartu)';
+            badge.style.borderColor = '#e11d48';
 
-        // Definisi konfigurasi masing-masing kendaraan
-        const configs = {
-            'redbull': { 
-                src: './redbull_RB19.glb', 
-                scale: '0.22 0.22 0.22', 
-                name: '🏎️ Red Bull Racing RB19', 
-                color: '#0284c7' 
-            },
-            'ferrari': { 
-                src: './ferarri_f1-75.glb', 
-                scale: '0.15 0.15 0.15', 
-                name: '🏎️ Scuderia Ferrari F1-75', 
-                color: '#e11d48' 
-            },
-            'f1-75': { 
-                src: './ferarri_f1-75.glb', 
-                scale: '0.15 0.15 0.15', 
-                name: '🏎️ Scuderia Ferrari F1-75', 
-                color: '#e11d48' 
-            },
-            'ducati': { 
-                src: './ducati_desmo.glb', 
-                scale: '0.26 0.26 0.26', 
-                name: '🏍️ Ducati Desmosedici MotoGP', 
-                color: '#f59e0b' 
-            }
-        };
+            // Kunci: Pasang Ferrari ke Target 1 & 0 agar tidak ada kemungkinan muncul Red Bull
+            m0.setAttribute('src', './ferarri_f1-75.glb');
+            m0.setAttribute('scale', '0.15 0.15 0.15');
+            m1.setAttribute('src', './ferarri_f1-75.glb');
+            m1.setAttribute('scale', '0.15 0.15 0.15');
+        } else if (param === 'ducati') {
+            badge.innerText = '🏍️ Ducati Desmosedici (Arahkan ke Kartu)';
+            badge.style.borderColor = '#f59e0b';
 
-        // Baca parameter model dari URL (?model=ferrari, ?model=redbull, ?model=ducati)
-        const urlParams = new URLSearchParams(window.location.search);
-        let selectedModel = (urlParams.get('model') || '').toLowerCase();
-
-        function applyModel(modelKey) {
-            const cfg = configs[modelKey] || configs['redbull'];
-            badge.innerText = cfg.name + ' (Arahkan ke Kartu)';
-            badge.style.borderColor = cfg.color;
-
-            // KUNCI UTAMA AGAR FERRARI TIDAK PERNAH JADI RED BULL:
-            // Jika mode Ferrari aktif, kita pasang file Ferrari F1-75 ke Target 1 DAN Target 0.
-            // Sehingga bila kamera sedikit salah deteksi antara Target 0 & 1, yang keluar TETAP Ferrari!
-            // File Red Bull sama sekali TIDAK DIMUAT ke memori.
-            if (modelKey === 'ferrari' || modelKey === 'f1-75') {
-                model0.setAttribute('src', cfg.src);
-                model0.setAttribute('scale', cfg.scale);
-
-                model1.setAttribute('src', cfg.src);
-                model1.setAttribute('scale', cfg.scale);
-
-                model2.removeAttribute('src'); // Matikan Ducati
-            } else if (modelKey === 'ducati') {
-                model0.removeAttribute('src');
-                model1.removeAttribute('src');
-
-                model2.setAttribute('src', cfg.src);
-                model2.setAttribute('scale', cfg.scale);
-            } else {
-                // Default: Red Bull
-                model0.setAttribute('src', cfg.src);
-                model0.setAttribute('scale', cfg.scale);
-
-                model1.removeAttribute('src');
-                model2.removeAttribute('src');
-            }
-
-            // Update UI Tab Aktif jika tab muncul
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                if (btn.getAttribute('data-model') === modelKey) {
-                    btn.classList.add('active');
-                    btn.style.background = cfg.color;
-                } else {
-                    btn.classList.remove('active');
-                    btn.style.background = 'transparent';
-                }
-            });
-        }
-
-        // Terapkan model berdasarkan URL
-        if (selectedModel && configs[selectedModel]) {
-            applyModel(selectedModel);
+            m2.setAttribute('src', './ducati_desmo.glb');
+            m2.setAttribute('scale', '0.26 0.26 0.26');
         } else {
-            // Jika tanpa parameter URL, munculkan Tab Switcher di atas layar agar user bisa ganti kapan saja
-            modelTabs.style.display = 'flex';
-            applyModel('redbull');
+            // Default: Red Bull RB19
+            badge.innerText = '🏎️ Red Bull RB19 (Arahkan ke Kartu)';
+            badge.style.borderColor = '#0284c7';
+
+            m0.setAttribute('src', './redbull_RB19.glb');
+            m0.setAttribute('scale', '0.22 0.22 0.22');
         }
 
-        // Fungsi manual switch dari tab UI
-        window.switchModel = function(modelKey) {
-            applyModel(modelKey);
-        };
-
-        // Event listener targetFound untuk info badge
-        [target0, target1, target2].forEach((t, idx) => {
+        // Feedback visual saat target terdeteksi
+        document.querySelectorAll('a-entity[mindar-image-target]').forEach(t => {
             t.addEventListener('targetFound', () => {
-                const activeCfg = configs[selectedModel] || configs['redbull'];
-                badge.innerText = activeCfg.name + ' Terdeteksi! 🏁';
+                badge.innerText = '🏁 Kendaraan Terdeteksi!';
                 badge.style.borderColor = '#22c55e';
             });
-
-            t.addEventListener('targetLost', () => {
-                const activeCfg = configs[selectedModel] || configs['redbull'];
-                setTimeout(() => {
-                    badge.innerText = activeCfg.name + ' (Arahkan ke Kartu)';
-                    badge.style.borderColor = activeCfg.color;
-                }, 1000);
-            });
-        });
-
-        // Sembunyikan layar loading setelah kamera siap
-        scene.addEventListener('arReady', () => {
-            loader.style.opacity = '0';
-            setTimeout(() => {
-                loader.style.display = 'none';
-            }, 400);
-        });
-
-        // Tangani jika izin kamera ditolak / error HTTPS
-        scene.addEventListener('arError', () => {
-            loader.querySelector('.loader-text').innerText = 'Gagal mengakses kamera. Pastikan izin kamera aktif & buka via HTTPS.';
-            loader.querySelector('.spinner').style.display = 'none';
         });
     </script>
 

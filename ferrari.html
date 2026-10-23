@@ -4,9 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>AR Scuderia Ferrari F1-75</title>
 
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -14,107 +11,52 @@
 
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
-        #loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #0b0f19; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; color: #fff; z-index: 99999;
-            transition: opacity 0.4s ease;
-        }
-        .spinner {
-            width: 44px; height: 44px; border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #e11d48; border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loader-text { margin-top: 16px; font-size: 14px; color: #94a3b8; }
         #badge {
             position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.9); border: 2px solid #e11d48;
             padding: 8px 18px; border-radius: 20px; color: #fff;
-            font-size: 13px; font-weight: 700; z-index: 1000;
-            pointer-events: none; transition: all 0.3s ease;
+            font-size: 13px; font-weight: bold; z-index: 1000;
+            white-space: nowrap; pointer-events: none;
         }
     </style>
-
-    <script>
-        AFRAME.registerComponent('sticky-visibility', {
-            schema: { timeout: { type: 'number', default: 3500 } },
-            init: function () {
-                this.lostTimer = null;
-                this.isFound = false;
-                this.el.addEventListener('targetFound', () => {
-                    this.isFound = true;
-                    if (this.lostTimer) { clearTimeout(this.lostTimer); this.lostTimer = null; }
-                    this.el.object3D.visible = true;
-                    document.getElementById('badge').innerText = '🏎️ Ferrari F1-75 Terdeteksi! 🏁';
-                    document.getElementById('badge').style.borderColor = '#22c55e';
-                });
-                this.el.addEventListener('targetLost', () => {
-                    this.isFound = false;
-                    if (this.lostTimer) clearTimeout(this.lostTimer);
-                    this.lostTimer = setTimeout(() => {
-                        if (!this.isFound) {
-                            this.el.object3D.visible = false;
-                            document.getElementById('badge').innerText = '🏎️ Ferrari F1-75 (Arahkan ke Kartu)';
-                            document.getElementById('badge').style.borderColor = '#e11d48';
-                        }
-                    }, this.data.timeout);
-                });
-            },
-            tick: function () {
-                if (this.lostTimer && !this.isFound) {
-                    this.el.object3D.visible = true;
-                }
-            }
-        });
-    </script>
 </head>
 
 <body>
 
-    <div id="loader">
-        <div class="spinner"></div>
-        <div class="loader-text">Menyiapkan Kamera AR Ferrari F1-75...</div>
-    </div>
-
     <div id="badge">🏎️ Ferrari F1-75 (Arahkan ke Kartu)</div>
 
+    <!-- Scene AR khusus Ferrari F1-75 -->
     <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind?v=20261023; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 20; warmupTolerance: 2;" 
-        color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false">
+        mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; missTolerance: 20; warmupTolerance: 2; filterMinCF: 0.0001; filterBeta: 0.001;" 
+        color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <a-light type="ambient" intensity="1.6" color="#ffffff"></a-light>
-        <a-light type="directional" position="2 4 3" intensity="2.2" color="#ffffff"></a-light>
-        <a-light type="directional" position="-2 -2 2" intensity="1.2" color="#93c5fd"></a-light>
+        <a-light type="ambient" intensity="1.6"></a-light>
+        <a-light type="directional" position="2 4 3" intensity="2.0"></a-light>
+        <a-light type="directional" position="-2 -2 2" intensity="1.0" color="#93c5fd"></a-light>
 
-        <!-- Pasang model Ferrari di Target 1 dan Target 0 agar tidak ada kemungkinan muncul mobil lain -->
-        <a-entity mindar-image-target="targetIndex: 0" sticky-visibility="timeout: 3500">
+        <!-- Ferrari F1-75 terpasang di target 1 dan 0 agar selalu akurat -->
+        <a-entity mindar-image-target="targetIndex: 0">
             <a-gltf-model src="./ferarri_f1-75.glb" position="0 0 0.05" rotation="90 0 0" scale="0.15 0.15 0.15"></a-gltf-model>
         </a-entity>
 
-        <a-entity mindar-image-target="targetIndex: 1" sticky-visibility="timeout: 3500">
+        <a-entity mindar-image-target="targetIndex: 1">
             <a-gltf-model src="./ferarri_f1-75.glb" position="0 0 0.05" rotation="90 0 0" scale="0.15 0.15 0.15"></a-gltf-model>
         </a-entity>
 
     </a-scene>
 
     <script>
-        const scene = document.querySelector('a-scene');
-        const loader = document.getElementById('loader');
-        scene.addEventListener('arReady', () => {
-            loader.style.opacity = '0';
-            setTimeout(() => { loader.style.display = 'none'; }, 400);
-        });
-        scene.addEventListener('arError', () => {
-            loader.querySelector('.loader-text').innerText = 'Gagal mengakses kamera. Buka melalui HTTPS dan izinkan akses kamera.';
-            loader.querySelector('.spinner').style.display = 'none';
+        const badge = document.getElementById('badge');
+        document.querySelectorAll('a-entity[mindar-image-target]').forEach(t => {
+            t.addEventListener('targetFound', () => {
+                badge.innerText = '🏁 Ferrari F1-75 Terdeteksi!';
+                badge.style.borderColor = '#22c55e';
+            });
         });
     </script>
 
 </body>
+
 </html>
