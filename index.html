@@ -11,12 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
 
-    <!-- Preload Lightweight Draco-Compressed 3D Models in Background (Instant 0ms Appearance) -->
-    <link rel="preload" href="./redbull_RB19.glb" as="fetch" crossorigin="anonymous">
-    <link rel="preload" href="./ferarri_f1-75.glb" as="fetch" crossorigin="anonymous">
-    <link rel="preload" href="./mercy-w15.glb" as="fetch" crossorigin="anonymous">
-    <link rel="preload" href="./f1-amr23.glb" as="fetch" crossorigin="anonymous">
-    <link rel="preload" href="./ducati_desmo.glb" as="fetch" crossorigin="anonymous">
+    <!-- PWA & Mobile WebApp Optimization -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <!-- Model Viewer & jsQR Library -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
@@ -89,6 +88,53 @@
             opacity: 1;
             visibility: visible;
             pointer-events: auto;
+        }
+
+        /* ========================================================
+           LOADING PROGRESS INDICATOR UNTUK 3D MODEL
+        ======================================================== */
+        .model-loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            padding: 16px 26px;
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            z-index: 15;
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            transition: opacity 0.25s ease;
+        }
+
+        .model-loader.show {
+            display: flex;
+        }
+
+        .loader-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            border-top-color: #38bdf8;
+            border-radius: 50%;
+            animation: spinLoader 0.75s linear infinite;
+        }
+
+        @keyframes spinLoader {
+            to { transform: rotate(360deg); }
+        }
+
+        #loader-text {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #f8fafc;
+            letter-spacing: 0.5px;
         }
 
         /* ========================================================
@@ -519,12 +565,9 @@
     <video id="camera-video" playsinline autoplay muted></video>
     <canvas id="scan-canvas"></canvas>
 
-    <!-- 2. Transparent 3D Model Viewers (Preloaded in Memory for 0ms Instant Display) -->
-    <!-- Model 1: Red Bull RB19 -->
-    <model-viewer id="mv-redbull"
+    <!-- 2. Single Dynamic Transparent 3D Model Viewer (Super Lightweight & Low VRAM) -->
+    <model-viewer id="main-model-viewer"
         class="ar-model-viewer"
-        src="./redbull_RB19.glb"
-        loading="eager"
         camera-controls
         auto-rotate
         rotation-per-second="25deg"
@@ -534,61 +577,11 @@
         interaction-prompt="none">
     </model-viewer>
 
-    <!-- Model 2: Ferrari F1-75 -->
-    <model-viewer id="mv-ferrari"
-        class="ar-model-viewer"
-        src="./ferarri_f1-75.glb"
-        loading="eager"
-        camera-controls
-        auto-rotate
-        rotation-per-second="25deg"
-        shadow-intensity="1.6"
-        shadow-softness="0.7"
-        exposure="1.0"
-        interaction-prompt="none">
-    </model-viewer>
-
-    <!-- Model 3: Mercedes W15 -->
-    <model-viewer id="mv-mercedes"
-        class="ar-model-viewer"
-        src="./mercy-w15.glb"
-        loading="eager"
-        camera-controls
-        auto-rotate
-        rotation-per-second="25deg"
-        shadow-intensity="1.6"
-        shadow-softness="0.7"
-        exposure="1.0"
-        interaction-prompt="none">
-    </model-viewer>
-
-    <!-- Model 4: Aston Martin AMR23 -->
-    <model-viewer id="mv-astonmartin"
-        class="ar-model-viewer"
-        src="./f1-amr23.glb"
-        loading="eager"
-        camera-controls
-        auto-rotate
-        rotation-per-second="25deg"
-        shadow-intensity="1.6"
-        shadow-softness="0.7"
-        exposure="1.0"
-        interaction-prompt="none">
-    </model-viewer>
-
-    <!-- Model 5: Ducati Desmosedici -->
-    <model-viewer id="mv-ducati"
-        class="ar-model-viewer"
-        src="./ducati_desmo.glb"
-        loading="eager"
-        camera-controls
-        auto-rotate
-        rotation-per-second="25deg"
-        shadow-intensity="1.6"
-        shadow-softness="0.7"
-        exposure="1.0"
-        interaction-prompt="none">
-    </model-viewer>
+    <!-- Sleek 3D Loading Spinner HUD -->
+    <div id="model-loader" class="model-loader">
+        <div class="loader-spinner"></div>
+        <span id="loader-text">Memuat Model 3D...</span>
+    </div>
 
     <!-- 3. Scanner Reticle Overlay (Active when waiting for user to scan) -->
     <div id="scanner-overlay">
@@ -646,32 +639,37 @@
 
     <!-- Engine Logic Script -->
     <script>
-        // Data Kendaraan Sesuai QR Code
+        // Data Kendaraan Sesuai QR Code (Sumber 3D Model Dinamis / Lazy Loaded)
         const VEHICLES = {
             'redbull': {
                 name: 'Red Bull Racing RB19',
                 cat: 'Oracle Red Bull • Formula 1',
-                color: '#0284c7'
+                color: '#0284c7',
+                src: './redbull_RB19.glb'
             },
             'ferrari': {
                 name: 'Ferrari F1-75',
                 cat: 'Scuderia Ferrari • Formula 1',
-                color: '#e11d48'
+                color: '#e11d48',
+                src: './ferarri_f1-75.glb'
             },
             'mercedes': {
                 name: 'Mercedes-AMG F1 W15',
                 cat: 'Mercedes-AMG PETRONAS • Formula 1',
-                color: '#00a19c'
+                color: '#00a19c',
+                src: './mercy-w15.glb'
             },
             'astonmartin': {
                 name: 'Aston Martin AMR23',
                 cat: 'Aston Martin Aramco • Formula 1',
-                color: '#00594f'
+                color: '#00594f',
+                src: './f1-amr23.glb'
             },
             'ducati': {
                 name: 'Ducati Desmosedici GP',
                 cat: 'Ducati Lenovo • MotoGP',
-                color: '#f59e0b'
+                color: '#f59e0b',
+                src: './ducati_desmo.glb'
             }
         };
 
@@ -686,15 +684,6 @@
             if (str.includes('ducati') || str.includes('desmo') || str === 'ducati' || str === 'desmo') return 'ducati';
             return null;
         }
-
-        // Status Preload Cache di Memori GPU
-        const modelLoadedState = {
-            'redbull': false,
-            'ferrari': false,
-            'mercedes': false,
-            'astonmartin': false,
-            'ducati': false
-        };
 
         let currentActiveModel = null;
         let isTransitioning = false;
@@ -715,21 +704,42 @@
         const badgeTitle = document.getElementById('badge-title');
         const badgeCat = document.getElementById('badge-cat');
         const modelBadge = document.getElementById('model-badge');
+        const mainViewer = document.getElementById('main-model-viewer');
+        const modelLoader = document.getElementById('model-loader');
+        const loaderText = document.getElementById('loader-text');
 
-        // Pantau status preload masing-masing model
-        Object.keys(VEHICLES).forEach(k => {
-            const mv = document.getElementById(`mv-${k}`);
-            if (mv) {
-                mv.addEventListener('load', () => {
-                    modelLoadedState[k] = true;
-                    console.log(`✅ Model ${k} siap di memori GPU!`);
-                    if (currentActiveModel === k) {
-                        badgeTitle.innerText = VEHICLES[k].name;
-                        badgeCat.innerText = VEHICLES[k].cat;
-                    }
-                });
+        // Setup Event Listener pada Single Model Viewer (Hemat Memori & Loading Cepat)
+        if (mainViewer) {
+            mainViewer.addEventListener('progress', (e) => {
+                const percent = Math.round(e.detail.totalProgress * 100);
+                if (loaderText && percent < 100) {
+                    loaderText.innerText = `Memuat 3D... ${percent}%`;
+                }
+            });
+
+            mainViewer.addEventListener('load', () => {
+                hideLoader();
+                console.log(`✅ Model 3D berhasil dimuat ke GPU!`);
+            });
+
+            mainViewer.addEventListener('error', (err) => {
+                hideLoader();
+                console.warn('Model loading error:', err);
+            });
+        }
+
+        function showLoader(vehicleName) {
+            if (modelLoader) {
+                if (loaderText) loaderText.innerText = `Memuat ${vehicleName || 'Model 3D'}...`;
+                modelLoader.classList.add('show');
             }
-        });
+        }
+
+        function hideLoader() {
+            if (modelLoader) {
+                modelLoader.classList.remove('show');
+            }
+        }
 
         // Kontrol Suara (Mute / Unmute)
         function toggleSound() {
@@ -1225,7 +1235,6 @@
             isTransitioning = true;
             const oldKey = currentActiveModel;
             const newData = VEHICLES[newKey];
-            const newViewer = document.getElementById(`mv-${newKey}`);
 
             // Hentikan background music sementara agar suara mesin terdengar jelas
             stopF1Theme(true);
@@ -1234,46 +1243,36 @@
             scannerOverlay.style.display = 'none';
 
             // KASUS 1: Sudah ada mobil yang sedang tampil -> Mobil lama melaju pergi dulu
-            if (oldKey && oldKey !== newKey) {
-                const oldViewer = document.getElementById(`mv-${oldKey}`);
-                if (oldViewer) {
-                    console.log(`🚀 Mobil ${oldKey} melaju pergi keluar layar...`);
+            if (oldKey && oldKey !== newKey && mainViewer && mainViewer.classList.contains('active')) {
+                console.log(`🚀 Mobil ${oldKey} melaju pergi keluar layar...`);
 
-                    // Mainkan Sound F1 Melaju Pergi + Efek Kecepatan
-                    playF1EngineSound('out');
-                    triggerSpeedFx();
+                // Mainkan Sound F1 Melaju Pergi + Efek Kecepatan
+                playF1EngineSound('out');
+                triggerSpeedFx();
 
-                    // Hentikan putaran rotasi saat melaju
-                    oldViewer.autoRotate = false;
-                    oldViewer.classList.remove('drive-in');
-                    oldViewer.classList.add('drive-out');
+                // Hentikan putaran rotasi saat melaju
+                mainViewer.autoRotate = false;
+                mainViewer.classList.remove('drive-in');
+                mainViewer.classList.add('drive-out');
 
-                    // Tunggu animasi melaju pergi selesai (~420ms), lalu munculkan mobil baru
-                    setTimeout(() => {
-                        oldViewer.classList.remove('active', 'drive-out');
+                // Tunggu animasi melaju pergi selesai (~420ms), lalu munculkan mobil baru
+                setTimeout(() => {
+                    mainViewer.classList.remove('active', 'drive-out');
 
-                        // Mobil baru melaju masuk ke depan!
-                        launchNewCar(newKey, newData, newViewer, true);
-                    }, 430);
-                    return;
-                }
+                    // Mobil baru melaju masuk ke depan!
+                    launchNewCar(newKey, newData, true);
+                }, 430);
+                return;
             }
 
             // KASUS 2: Scan Pertama Kali (Belum ada mobil aktif)
-            launchNewCar(newKey, newData, newViewer, false);
+            launchNewCar(newKey, newData, false);
         }
 
         // Meluncurkan Mobil Baru: Melaju Masuk ke Depan Layar Kamera
-        function launchNewCar(key, data, viewer, isSwitching) {
+        function launchNewCar(key, data, isSwitching) {
             console.log(`🏎️ Mobil ${key} melaju masuk ke depan!`);
             currentActiveModel = key;
-
-            // Bersihkan viewer lain
-            document.querySelectorAll('.ar-model-viewer').forEach(el => {
-                if (el !== viewer) {
-                    el.classList.remove('active', 'drive-in', 'drive-out');
-                }
-            });
 
             // Mainkan Sound Formula 1 Melaju Masuk + Efek Kecepatan
             playF1EngineSound('in');
@@ -1287,18 +1286,24 @@
 
             showToast(isSwitching ? `🔄 Ganti ke ${data.name}!` : `🏎️ ${data.name} Melaju Masuk!`);
 
-            if (viewer) {
+            if (mainViewer) {
+                // Pasang src model hanya jika berbeda (hemat bandwidth & VRAM)
+                const currentSrc = mainViewer.getAttribute('src');
+                if (currentSrc !== data.src) {
+                    showLoader(data.name);
+                    mainViewer.src = data.src;
+                }
+
                 // Posisi menghadap depan dan hentikan rotasi saat sedang meluncur
-                viewer.cameraOrbit = '0deg 75deg 105%';
-                viewer.autoRotate = false;
-                viewer.classList.remove('drive-out');
-                viewer.classList.add('active');
-                viewer.classList.add('drive-in');
+                mainViewer.cameraOrbit = '0deg 75deg 105%';
+                mainViewer.autoRotate = false;
+                mainViewer.classList.remove('drive-out');
+                mainViewer.classList.add('active', 'drive-in');
 
                 // Setelah mobil sampai di depan (780ms), mulai rotasi interaktif 3D & nyalakan F1 Theme Music
                 setTimeout(() => {
-                    viewer.classList.remove('drive-in');
-                    viewer.autoRotate = true;
+                    mainViewer.classList.remove('drive-in');
+                    mainViewer.autoRotate = true;
                     isTransitioning = false;
 
                     // Nyalakan Theme Sound Formula 1 (Brian Tyler) saat user melihat-lihat model 3D
@@ -1319,22 +1324,20 @@
             // Matikan Theme Song saat kembali ke scanner
             stopF1Theme(true);
 
-            if (oldKey) {
-                const oldViewer = document.getElementById(`mv-${oldKey}`);
-                if (oldViewer) {
-                    isTransitioning = true;
-                    playF1EngineSound('out');
-                    triggerSpeedFx();
-                    oldViewer.autoRotate = false;
-                    oldViewer.classList.remove('drive-in');
-                    oldViewer.classList.add('drive-out');
+            if (oldKey && mainViewer && mainViewer.classList.contains('active')) {
+                isTransitioning = true;
+                playF1EngineSound('out');
+                triggerSpeedFx();
+                mainViewer.autoRotate = false;
+                mainViewer.classList.remove('drive-in');
+                mainViewer.classList.add('drive-out');
 
-                    setTimeout(() => {
-                        oldViewer.classList.remove('active', 'drive-out');
-                        finishReset();
-                    }, 430);
-                    return;
-                }
+                setTimeout(() => {
+                    mainViewer.classList.remove('active', 'drive-out');
+                    mainViewer.removeAttribute('src'); // Kosongkan VRAM
+                    finishReset();
+                }, 430);
+                return;
             }
 
             finishReset();
@@ -1342,9 +1345,10 @@
 
         function finishReset() {
             currentActiveModel = null;
-            document.querySelectorAll('.ar-model-viewer').forEach(el => {
-                el.classList.remove('active', 'drive-in', 'drive-out');
-            });
+            hideLoader();
+            if (mainViewer) {
+                mainViewer.classList.remove('active', 'drive-in', 'drive-out');
+            }
             arUiOverlay.style.display = 'none';
             scannerOverlay.style.display = 'flex';
             lastScannedText = '';
@@ -1369,6 +1373,15 @@
                 }, 500);
             }
         });
+
+        // Registrasi Service Worker PWA untuk Caching Offline Otomatis
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(() => console.log('✅ Service Worker PWA aktif'))
+                    .catch(e => console.log('SW registration error:', e));
+            });
+        }
     </script>
 
 </body>
