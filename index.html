@@ -80,14 +80,127 @@
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
-            transition: opacity 0.25s ease;
             outline: none;
+            will-change: transform, opacity, filter;
+            transition: opacity 0.25s ease;
         }
 
         .ar-model-viewer.active {
             opacity: 1;
             visibility: visible;
             pointer-events: auto;
+        }
+
+        /* ========================================================
+           ANIMASI MOBIL F1: MELAJU MASUK & MELAJU PERGI
+        ======================================================== */
+        /* Animasi Mobil Melaju Masuk (Datang dari kejauhan melaju ke depan) */
+        .ar-model-viewer.drive-in {
+            opacity: 1 !important;
+            visibility: visible !important;
+            animation: carDriveIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Animasi Mobil Melaju Pergi (Gas pol melesat ke depan keluar layar) */
+        .ar-model-viewer.drive-out {
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: none !important;
+            animation: carDriveOut 0.48s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+        }
+
+        @keyframes carDriveIn {
+            0% {
+                opacity: 0;
+                transform: perspective(900px) translate3d(0, 110px, -800px) scale(0.12);
+                filter: blur(8px);
+            }
+            45% {
+                opacity: 0.95;
+                filter: blur(2px);
+            }
+            85% {
+                transform: perspective(900px) translate3d(0, -12px, 30px) scale(1.04);
+                filter: blur(0);
+            }
+            100% {
+                opacity: 1;
+                transform: perspective(900px) translate3d(0, 0, 0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes carDriveOut {
+            0% {
+                opacity: 1;
+                transform: perspective(900px) translate3d(0, 0, 0) scale(1);
+                filter: blur(0);
+            }
+            25% {
+                /* Hentakan throttle sebelum melesat */
+                transform: perspective(900px) translate3d(0, 14px, -35px) scale(0.95);
+            }
+            100% {
+                opacity: 0;
+                /* Melaju kencang ke depan melewati kamera layar */
+                transform: perspective(900px) translate3d(0, -90px, 600px) scale(2.4);
+                filter: blur(10px);
+            }
+        }
+
+        /* Efek Getaran Kamera / Screen Rumble */
+        @keyframes screenRumble {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(3px, -2px); }
+            60% { transform: translate(-2px, -2px); }
+            80% { transform: translate(2px, 2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        body.rumble {
+            animation: screenRumble 0.38s ease-out;
+        }
+
+        /* Efek Garis Kecepatan Balapan (Speed Lines Effect) */
+        .speed-fx {
+            position: fixed;
+            inset: 0;
+            z-index: 15;
+            pointer-events: none;
+            opacity: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.4) 100%);
+            transition: opacity 0.15s ease;
+        }
+
+        .speed-fx.active {
+            opacity: 1;
+            animation: speedRumble 0.65s ease-out forwards;
+        }
+
+        .speed-line {
+            position: absolute;
+            background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+            width: 2px;
+            height: 140px;
+            border-radius: 2px;
+            opacity: 0.75;
+            filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+        }
+        .sl-1 { top: 10%; left: 14%; height: 160px; transform: rotate(-15deg); }
+        .sl-2 { top: 15%; right: 16%; height: 140px; transform: rotate(18deg); }
+        .sl-3 { bottom: 12%; left: 20%; height: 180px; transform: rotate(10deg); }
+        .sl-4 { bottom: 15%; right: 18%; height: 150px; transform: rotate(-12deg); }
+        .sl-5 { top: 38%; left: 8%; height: 210px; transform: rotate(-5deg); }
+        .sl-6 { top: 40%; right: 9%; height: 220px; transform: rotate(8deg); }
+
+        @keyframes speedRumble {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.02) translate(-2px, 2px); }
+            50% { transform: scale(0.99) translate(2px, -1px); }
+            75% { transform: scale(1.01) translate(-1px, 1px); }
+            100% { transform: scale(1) translate(0, 0); opacity: 0; }
         }
 
         /* ========================================================
@@ -172,11 +285,26 @@
             width: 32px;
             height: 32px;
             border: 4px solid var(--accent-cyan);
+            transition: all 0.2s ease;
         }
         .top-left { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 20px 0 0 0; }
         .top-right { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 20px 0 0; }
         .bottom-left { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 20px; }
         .bottom-right { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 20px 0; }
+
+        /* Reticle Feedback Hijau Terkunci Saat QR Terbaca */
+        .reticle-container.locked {
+            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.6);
+        }
+        .reticle-container.locked .corner {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.85);
+            transform: scale(0.92);
+        }
+        .reticle-container.locked .laser-line {
+            background: linear-gradient(90deg, transparent, #22c55e, #4ade80, #22c55e, transparent) !important;
+            box-shadow: 0 0 18px #22c55e !important;
+        }
 
         .laser-line {
             position: absolute;
@@ -372,6 +500,21 @@
         <span id="toast-msg">QR Berhasil Terdeteksi!</span>
     </div>
 
+    <!-- Formula 1 Audio Effects (Preloaded) -->
+    <audio id="snd-f1-in" src="./f1_drive_in.wav" preload="auto"></audio>
+    <audio id="snd-f1-out" src="./f1_drive_out.wav" preload="auto"></audio>
+    <audio id="snd-f1-theme" src="./f1_theme.m4a" loop preload="auto"></audio>
+
+    <!-- Speed Lines Effect During Car Drive In / Out -->
+    <div id="speed-fx" class="speed-fx">
+        <div class="speed-line sl-1"></div>
+        <div class="speed-line sl-2"></div>
+        <div class="speed-line sl-3"></div>
+        <div class="speed-line sl-4"></div>
+        <div class="speed-line sl-5"></div>
+        <div class="speed-line sl-6"></div>
+    </div>
+
     <!-- 1. Fullscreen Live Camera Stream (Always Running in Background) -->
     <video id="camera-video" playsinline autoplay muted></video>
     <canvas id="scan-canvas"></canvas>
@@ -453,7 +596,11 @@
             <div class="app-badge">
                 <span>📷 AR SCANNER 3D</span>
             </div>
-            <button class="cam-switch-btn" onclick="switchCamera()" title="Ganti Kamera">🔄</button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="torch-btn" class="cam-switch-btn" onclick="toggleTorch()" title="Senter / Flashlight" style="display: none;">🔦</button>
+                <button class="sound-toggle-btn cam-switch-btn" onclick="toggleSound()" title="Aktif/Bisu Suara F1">🔊</button>
+                <button class="cam-switch-btn" onclick="switchCamera()" title="Ganti Kamera">🔄</button>
+            </div>
         </div>
 
         <div style="display: flex; flex-direction: column; align-items: center;">
@@ -476,9 +623,12 @@
 
     <!-- 4. Clean Top Bar When Model is Active (No bottom buttons at all) -->
     <div id="ar-ui-overlay">
-        <button class="reset-scan-btn" onclick="resetToScanner()">
-            🔍 Scan Model Lain
-        </button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="reset-scan-btn" onclick="resetToScanner()">
+                🔍 Scan Model Lain
+            </button>
+            <button class="sound-toggle-btn cam-switch-btn" onclick="toggleSound()" title="Aktif/Bisu Suara F1" style="width: 38px; height: 38px;">🔊</button>
+        </div>
         <div class="active-model-badge" id="model-badge">
             <div class="badge-title" id="badge-title">Red Bull RB19</div>
             <div class="badge-category" id="badge-cat">Formula 1</div>
@@ -547,12 +697,15 @@
         };
 
         let currentActiveModel = null;
+        let isTransitioning = false;
+        let soundEnabled = true;
         let videoStream = null;
         let isScanning = true;
         let currentFacingMode = 'environment';
         let audioCtx = null;
         let lastScannedText = '';
         let lastScanTime = 0;
+        let themeFadeTimer = null;
 
         const video = document.getElementById('camera-video');
         const canvas = document.getElementById('scan-canvas');
@@ -578,8 +731,151 @@
             }
         });
 
-        // Suara Beep saat QR Terbaca
-        function playBeep() {
+        // Kontrol Suara (Mute / Unmute)
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btns = document.querySelectorAll('.sound-toggle-btn');
+            btns.forEach(b => b.innerText = soundEnabled ? '🔊' : '🔇');
+            showToast(soundEnabled ? 'Suara & Musik F1: Aktif 🔊' : 'Suara Dimatikan 🔇', soundEnabled ? '🔊' : '🔇');
+            if (soundEnabled) {
+                unlockAudio();
+                if (currentActiveModel) {
+                    startF1Theme();
+                }
+            } else {
+                stopF1Theme(false);
+            }
+        }
+
+        // Auto-unlock AudioContext & HTML5 Audio untuk aturan Autoplay Policy browser HP
+        function unlockAudio() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                // Pre-warm audio elements agar instan saat dimainkan
+                const inEl = document.getElementById('snd-f1-in');
+                const outEl = document.getElementById('snd-f1-out');
+                const themeEl = document.getElementById('snd-f1-theme');
+                if (inEl && inEl.paused) { inEl.load(); }
+                if (outEl && outEl.paused) { outEl.load(); }
+                if (themeEl && themeEl.paused) { themeEl.load(); }
+            } catch (e) {}
+        }
+        window.addEventListener('click', unlockAudio, { passive: true });
+        window.addEventListener('touchstart', unlockAudio, { passive: true });
+
+        // Memutar Theme Song Resmi Formula 1 (Brian Tyler) Saat User Melihat-lihat Model 3D
+        function startF1Theme() {
+            if (!soundEnabled) return;
+            const themeEl = document.getElementById('snd-f1-theme');
+            if (!themeEl) return;
+
+            if (themeFadeTimer) {
+                clearInterval(themeFadeTimer);
+                themeFadeTimer = null;
+            }
+
+            try {
+                themeEl.volume = 0.05;
+                const playPromise = themeEl.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Smooth fade-in volume ke ~0.55 agar terdengar megah dan tidak bising
+                        let vol = 0.05;
+                        themeFadeTimer = setInterval(() => {
+                            vol += 0.05;
+                            if (vol >= 0.55) {
+                                vol = 0.55;
+                                clearInterval(themeFadeTimer);
+                                themeFadeTimer = null;
+                            }
+                            themeEl.volume = vol;
+                        }, 50);
+                    }).catch(e => {
+                        console.log('Autoplay audio theme prevented:', e);
+                    });
+                }
+            } catch (e) {
+                console.warn('F1 theme play error:', e);
+            }
+        }
+
+        // Menghentikan Theme Song Formula 1 dengan Fade Out
+        function stopF1Theme(fadeOut = true) {
+            const themeEl = document.getElementById('snd-f1-theme');
+            if (!themeEl) return;
+
+            if (themeFadeTimer) {
+                clearInterval(themeFadeTimer);
+                themeFadeTimer = null;
+            }
+
+            if (!fadeOut) {
+                themeEl.pause();
+                themeEl.currentTime = 0;
+                return;
+            }
+
+            let vol = themeEl.volume;
+            themeFadeTimer = setInterval(() => {
+                vol -= 0.1;
+                if (vol <= 0.02) {
+                    themeEl.pause();
+                    themeEl.currentTime = 0;
+                    themeEl.volume = 0.55;
+                    clearInterval(themeFadeTimer);
+                    themeFadeTimer = null;
+                } else {
+                    themeEl.volume = vol;
+                }
+            }, 35);
+        }
+
+        // Sistem Suara Formula 1 (Kombinasi File Audio + Web Audio Synthesizer Otomatis)
+        function playF1EngineSound(type = 'in') {
+            if (!soundEnabled) return;
+            unlockAudio();
+
+            // 1. Coba putar file audio pre-rendered untuk kualitas maksimal
+            let audioPlayed = false;
+            try {
+                const audioEl = document.getElementById(type === 'in' ? 'snd-f1-in' : 'snd-f1-out');
+                if (audioEl) {
+                    audioEl.currentTime = 0;
+                    const p = audioEl.play();
+                    if (p !== undefined) {
+                        p.then(() => {
+                            audioPlayed = true;
+                        }).catch(() => {
+                            // Jika browser memblokir HTML5 audio, gunakan synthesizer Web Audio
+                            synthF1Sound(type);
+                        });
+                    }
+                }
+            } catch (e) {}
+
+            // 2. Synthesize Web Audio API untuk hentakan suara instan 0ms
+            synthF1Sound(type);
+
+            // 3. Haptic Feedback / Getaran Ponsel
+            if (navigator.vibrate) {
+                try {
+                    if (type === 'in') {
+                        navigator.vibrate([60, 40, 100, 50, 150]);
+                    } else {
+                        navigator.vibrate([100, 40, 180]);
+                    }
+                } catch (e) {}
+            }
+        }
+
+        // Synthesizer Web Audio API Suara Mesin Formula 1 (Zero-Latency, 100% Offline)
+        function synthF1Sound(type = 'in') {
             try {
                 if (!audioCtx) {
                     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -587,26 +883,158 @@
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.12);
-                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.16);
-            } catch (e) {}
 
-            if (navigator.vibrate) {
-                navigator.vibrate(100);
+                const now = audioCtx.currentTime;
+                const duration = type === 'in' ? 1.5 : 1.3;
+
+                // Master Gain
+                const masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(0.55, now);
+                masterGain.connect(audioCtx.destination);
+
+                // Distortion Curve (Karakter Garing Khas Knalpot F1 V10)
+                const distortion = audioCtx.createWaveShaper();
+                distortion.curve = makeDistortionCurve(22);
+                distortion.oversample = '4x';
+                distortion.connect(masterGain);
+
+                // Filter Knalpot Resonan (Bandpass sweep)
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.Q.setValueAtTime(2.8, now);
+                filter.frequency.setValueAtTime(type === 'in' ? 1100 : 1500, now);
+                filter.connect(distortion);
+
+                // Multi-Osilator Harmonics
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const osc3 = audioCtx.createOscillator();
+                const oscSub = audioCtx.createOscillator();
+
+                osc1.type = 'sawtooth';
+                osc2.type = 'sawtooth';
+                osc3.type = 'triangle';
+                oscSub.type = 'sine';
+
+                const oscGain = audioCtx.createGain();
+                osc1.connect(oscGain);
+                osc2.connect(oscGain);
+                osc3.connect(oscGain);
+                oscGain.connect(filter);
+
+                // Sub Bass untuk getaran mesin
+                const subGain = audioCtx.createGain();
+                subGain.gain.setValueAtTime(0.3, now);
+                oscSub.connect(subGain);
+                subGain.connect(masterGain);
+
+                if (type === 'in') {
+                    // Mobil Melaju Masuk: Datang dari jauh, revving naik, gearshift pop, stabil
+                    osc1.frequency.setValueAtTime(320, now);
+                    osc1.frequency.exponentialRampToValueAtTime(1100, now + 0.55);
+                    osc1.frequency.setValueAtTime(880, now + 0.65);
+                    osc1.frequency.exponentialRampToValueAtTime(1250, now + 0.95);
+                    osc1.frequency.exponentialRampToValueAtTime(420, now + duration);
+
+                    osc2.frequency.setValueAtTime(645, now);
+                    osc2.frequency.exponentialRampToValueAtTime(2210, now + 0.55);
+                    osc2.frequency.setValueAtTime(1770, now + 0.65);
+                    osc2.frequency.exponentialRampToValueAtTime(2510, now + 0.95);
+                    osc2.frequency.exponentialRampToValueAtTime(845, now + duration);
+
+                    osc3.frequency.setValueAtTime(965, now);
+                    osc3.frequency.exponentialRampToValueAtTime(3310, now + 0.55);
+                    osc3.frequency.exponentialRampToValueAtTime(1260, now + duration);
+
+                    oscSub.frequency.setValueAtTime(160, now);
+                    oscSub.frequency.exponentialRampToValueAtTime(300, now + 0.7);
+                    oscSub.frequency.exponentialRampToValueAtTime(75, now + duration);
+
+                    oscGain.gain.setValueAtTime(0.1, now);
+                    oscGain.gain.linearRampToValueAtTime(0.65, now + 0.55);
+                    oscGain.gain.setValueAtTime(0.35, now + 0.65);
+                    oscGain.gain.linearRampToValueAtTime(0.75, now + 0.9);
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                    masterGain.gain.setValueAtTime(0.3, now);
+                    masterGain.gain.linearRampToValueAtTime(0.8, now + 0.85);
+                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                } else {
+                    // Mobil Melaju Keluar: Tancap gas pol, gearshift scream, Doppler flyby menjauh
+                    osc1.frequency.setValueAtTime(520, now);
+                    osc1.frequency.exponentialRampToValueAtTime(1400, now + 0.45);
+                    osc1.frequency.setValueAtTime(1050, now + 0.55);
+                    osc1.frequency.exponentialRampToValueAtTime(1650, now + 0.85);
+                    osc1.frequency.exponentialRampToValueAtTime(650, now + duration);
+
+                    osc2.frequency.setValueAtTime(1045, now);
+                    osc2.frequency.exponentialRampToValueAtTime(2810, now + 0.45);
+                    osc2.frequency.setValueAtTime(2110, now + 0.55);
+                    osc2.frequency.exponentialRampToValueAtTime(3310, now + 0.85);
+                    osc2.frequency.exponentialRampToValueAtTime(1310, now + duration);
+
+                    osc3.frequency.setValueAtTime(1565, now);
+                    osc3.frequency.exponentialRampToValueAtTime(4210, now + 0.45);
+                    osc3.frequency.exponentialRampToValueAtTime(1050, now + duration);
+
+                    oscSub.frequency.setValueAtTime(160, now);
+                    oscSub.frequency.exponentialRampToValueAtTime(240, now + 0.5);
+                    oscSub.frequency.exponentialRampToValueAtTime(65, now + duration);
+
+                    oscGain.gain.setValueAtTime(0.55, now);
+                    oscGain.gain.linearRampToValueAtTime(0.85, now + 0.45);
+                    oscGain.gain.setValueAtTime(0.4, now + 0.55);
+                    oscGain.gain.linearRampToValueAtTime(0.9, now + 0.8);
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                    masterGain.gain.setValueAtTime(0.65, now);
+                    masterGain.gain.linearRampToValueAtTime(0.9, now + 0.5);
+                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                }
+
+                osc1.start(now);
+                osc2.start(now);
+                osc3.start(now);
+                oscSub.start(now);
+
+                osc1.stop(now + duration);
+                osc2.stop(now + duration);
+                osc3.stop(now + duration);
+                oscSub.stop(now + duration);
+            } catch (e) {
+                console.warn('Synth F1 Audio error:', e);
             }
         }
 
+        function makeDistortionCurve(amount) {
+            const k = typeof amount === 'number' ? amount : 25;
+            const n_samples = 22050;
+            const curve = new Float32Array(n_samples);
+            const deg = Math.PI / 180;
+            for (let i = 0; i < n_samples; ++i) {
+                const x = (i * 2) / n_samples - 1;
+                curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+            }
+            return curve;
+        }
+
+        // Memicu Efek Visual Kecepatan & Getaran Layar
+        function triggerSpeedFx() {
+            const fx = document.getElementById('speed-fx');
+            if (fx) {
+                fx.classList.remove('active');
+                void fx.offsetWidth;
+                fx.classList.add('active');
+                setTimeout(() => fx.classList.remove('active'), 650);
+            }
+            document.body.classList.remove('rumble');
+            void document.body.offsetWidth;
+            document.body.classList.add('rumble');
+            setTimeout(() => document.body.classList.remove('rumble'), 380);
+        }
+
         // Tampilkan Notifikasi Toast
-        function showToast(msg, icon = '✅') {
+        function showToast(msg, icon = '🏎️') {
             const toast = document.getElementById('toast');
             document.getElementById('toast-msg').innerText = msg;
             document.getElementById('toast-icon').innerText = icon;
@@ -616,7 +1044,57 @@
             }, 2500);
         }
 
-        // Menyalakan Kamera HP
+        // Detector Native Barcode (Hardware acceleration pada browser modern)
+        let barcodeDetector = null;
+        if ('BarcodeDetector' in window) {
+            try {
+                barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+                console.log('⚡ Native Hardware BarcodeDetector aktif!');
+            } catch (e) {
+                barcodeDetector = null;
+            }
+        }
+
+        let isProcessingFrame = false;
+        let torchActive = false;
+
+        function checkTorchSupport() {
+            if (!videoStream) return;
+            const track = videoStream.getVideoTracks()[0];
+            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+            const torchBtn = document.getElementById('torch-btn');
+            if (torchBtn) {
+                torchBtn.style.display = capabilities.torch ? 'flex' : 'none';
+            }
+        }
+
+        async function toggleTorch() {
+            if (!videoStream) return;
+            const track = videoStream.getVideoTracks()[0];
+            try {
+                torchActive = !torchActive;
+                await track.applyConstraints({
+                    advanced: [{ torch: torchActive }]
+                });
+                const torchBtn = document.getElementById('torch-btn');
+                if (torchBtn) {
+                    torchBtn.innerText = torchActive ? '💡' : '🔦';
+                    torchBtn.style.background = torchActive ? '#eab308' : 'rgba(15, 23, 42, 0.85)';
+                }
+            } catch (e) {
+                console.log('Torch error:', e);
+            }
+        }
+
+        function flashReticle() {
+            const reticle = document.querySelector('.reticle-container');
+            if (reticle) {
+                reticle.classList.add('locked');
+                setTimeout(() => reticle.classList.remove('locked'), 500);
+            }
+        }
+
+        // Menyalakan Kamera HP dengan Continuous Autofocus & Macro
         async function startCamera() {
             document.getElementById('camera-error').style.display = 'none';
             if (videoStream) {
@@ -628,14 +1106,22 @@
                 const constraints = {
                     video: {
                         facingMode: currentFacingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        width: { ideal: 1280, min: 640 },
+                        height: { ideal: 720, min: 480 },
+                        advanced: [
+                            { focusMode: 'continuous' },
+                            { exposureMode: 'continuous' }
+                        ]
                     },
                     audio: false
                 };
                 videoStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = videoStream;
                 await video.play();
+
+                // Cek ketersediaan tombol lampu senter / torch
+                checkTorchSupport();
+
                 isScanning = true;
                 requestAnimationFrame(scanLoop);
             } catch (err) {
@@ -649,94 +1135,221 @@
             startCamera();
         }
 
-        // Loop Deteksi QR Code di Kamera
-        function scanLoop() {
+        // Loop Deteksi QR Code di Kamera (Dual-Engine: Native Hardware BarcodeDetector + jsQR Optimized)
+        async function scanLoop() {
             if (!isScanning) return;
 
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            if (!isTransitioning && !isProcessingFrame && video.readyState === video.HAVE_ENOUGH_DATA) {
+                isProcessingFrame = true;
+                let detectedData = null;
 
-                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imgData.data, imgData.width, imgData.height, {
-                    inversionAttempts: 'dontInvert'
-                });
-
-                if (code && code.data) {
-                    const now = Date.now();
-                    if (code.data !== lastScannedText || (now - lastScanTime) > 2500) {
-                        lastScannedText = code.data;
-                        lastScanTime = now;
-                        processScannedQR(code.data);
+                // 1. STRATEGI UTAMA: Hardware BarcodeDetector (Paling Akurat & Super Cepat ~5ms untuk Kertas Print)
+                if (barcodeDetector) {
+                    try {
+                        const barcodes = await barcodeDetector.detect(video);
+                        if (barcodes && barcodes.length > 0) {
+                            detectedData = barcodes[0].rawValue;
+                        }
+                    } catch (e) {
+                        // fallback ke jsQR jika detector browser mengalami kendala
                     }
                 }
+
+                // 2. STRATEGI KEDUA: jsQR dengan Downscaling & Center-Crop Khusus Kertas Print
+                if (!detectedData) {
+                    // Batasi resolusi maksimal ke 640px agar ringan 60fps & peka terhadap kertas print
+                    const maxDim = 640;
+                    const sw = video.videoWidth;
+                    const sh = video.videoHeight;
+                    const scale = Math.min(1, maxDim / Math.max(sw, sh));
+
+                    canvas.width = Math.floor(sw * scale);
+                    canvas.height = Math.floor(sh * scale);
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // A. Prioritas: Scan area tengah (area kotak bidik reticle)
+                    // Mengisolasi satu QR code yang sedang dibidik di antara beberapa QR pada kertas print
+                    const cropSize = Math.floor(Math.min(canvas.width, canvas.height) * 0.7);
+                    const cropX = Math.floor((canvas.width - cropSize) / 2);
+                    const cropY = Math.floor((canvas.height - cropSize) / 2);
+
+                    const centerImgData = ctx.getImageData(cropX, cropY, cropSize, cropSize);
+                    let code = jsQR(centerImgData.data, centerImgData.width, centerImgData.height, {
+                        inversionAttempts: 'attemptBoth'
+                    });
+
+                    // B. Jika tidak ditemukan di kotak tengah, scan keseluruhan layar
+                    if (!code) {
+                        const fullImgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        code = jsQR(fullImgData.data, fullImgData.width, fullImgData.height, {
+                            inversionAttempts: 'attemptBoth'
+                        });
+                    }
+
+                    if (code && code.data) {
+                        detectedData = code.data;
+                    }
+                }
+
+                // Jika terdeteksi QR Code kendaraan
+                if (detectedData) {
+                    const now = Date.now();
+                    const matchedKey = resolveModelKey(detectedData);
+
+                    if (matchedKey && VEHICLES[matchedKey]) {
+                        // Feedback visual: Kotak bidik menyala hijau seketika
+                        flashReticle();
+
+                        // Jalankan pergantian mobil jika berbeda dari yang sedang aktif
+                        if (matchedKey !== currentActiveModel) {
+                            if (detectedData !== lastScannedText || (now - lastScanTime) > 1000) {
+                                lastScannedText = detectedData;
+                                lastScanTime = now;
+                                switchVehicleTo(matchedKey);
+                            }
+                        }
+                    }
+                }
+
+                isProcessingFrame = false;
             }
 
             requestAnimationFrame(scanLoop);
         }
 
-        // Memproses Hasil Scan QR
-        function processScannedQR(qrText) {
-            console.log('QR Terdeteksi:', qrText);
-            const matchedKey = resolveModelKey(qrText);
+        // Mengatur Transisi Pergantian Mobil (Mobil Lama Melaju Keluar -> Mobil Baru Melaju Masuk)
+        function switchVehicleTo(newKey) {
+            if (!VEHICLES[newKey] || isTransitioning) return;
+            if (currentActiveModel === newKey) return;
 
-            if (matchedKey && VEHICLES[matchedKey]) {
-                playBeep();
-                showToast(`🏁 ${VEHICLES[matchedKey].name} Terdeteksi!`);
-                displayModelInLiveAR(matchedKey);
-            }
-        }
+            isTransitioning = true;
+            const oldKey = currentActiveModel;
+            const newData = VEHICLES[newKey];
+            const newViewer = document.getElementById(`mv-${newKey}`);
 
-        // Menampilkan Model 3D Secara Instan (0ms) di Layar Kamera Langsung
-        function displayModelInLiveAR(rawKey) {
-            const key = resolveModelKey(rawKey) || rawKey;
-            if (!VEHICLES[key]) return;
-            currentActiveModel = key;
-            const data = VEHICLES[key];
+            // Hentikan background music sementara agar suara mesin terdengar jelas
+            stopF1Theme(true);
 
-            // 1. Sembunyikan Kotak Bidik Scanner
+            // Sembunyikan Kotak Bidik Scanner
             scannerOverlay.style.display = 'none';
 
-            // 2. Nonaktifkan model lainnya agar tidak ada penumpukan
+            // KASUS 1: Sudah ada mobil yang sedang tampil -> Mobil lama melaju pergi dulu
+            if (oldKey && oldKey !== newKey) {
+                const oldViewer = document.getElementById(`mv-${oldKey}`);
+                if (oldViewer) {
+                    console.log(`🚀 Mobil ${oldKey} melaju pergi keluar layar...`);
+
+                    // Mainkan Sound F1 Melaju Pergi + Efek Kecepatan
+                    playF1EngineSound('out');
+                    triggerSpeedFx();
+
+                    // Hentikan putaran rotasi saat melaju
+                    oldViewer.autoRotate = false;
+                    oldViewer.classList.remove('drive-in');
+                    oldViewer.classList.add('drive-out');
+
+                    // Tunggu animasi melaju pergi selesai (~420ms), lalu munculkan mobil baru
+                    setTimeout(() => {
+                        oldViewer.classList.remove('active', 'drive-out');
+
+                        // Mobil baru melaju masuk ke depan!
+                        launchNewCar(newKey, newData, newViewer, true);
+                    }, 430);
+                    return;
+                }
+            }
+
+            // KASUS 2: Scan Pertama Kali (Belum ada mobil aktif)
+            launchNewCar(newKey, newData, newViewer, false);
+        }
+
+        // Meluncurkan Mobil Baru: Melaju Masuk ke Depan Layar Kamera
+        function launchNewCar(key, data, viewer, isSwitching) {
+            console.log(`🏎️ Mobil ${key} melaju masuk ke depan!`);
+            currentActiveModel = key;
+
+            // Bersihkan viewer lain
             document.querySelectorAll('.ar-model-viewer').forEach(el => {
-                el.classList.remove('active');
+                if (el !== viewer) {
+                    el.classList.remove('active', 'drive-in', 'drive-out');
+                }
             });
 
-            // 3. Aktifkan model yang terdeteksi seketika (Instant tanpa download ulang)
-            const targetViewer = document.getElementById(`mv-${key}`);
-            if (targetViewer) {
-                targetViewer.classList.add('active');
-                targetViewer.cameraOrbit = '0deg 75deg 105%';
-                targetViewer.autoRotate = true;
-            }
+            // Mainkan Sound Formula 1 Melaju Masuk + Efek Kecepatan
+            playF1EngineSound('in');
+            triggerSpeedFx();
 
-            // 4. Update Badge di atas
-            if (modelLoadedState[key]) {
-                badgeTitle.innerText = data.name;
-                badgeCat.innerText = data.cat;
-            } else {
-                badgeTitle.innerText = data.name;
-                badgeCat.innerText = data.cat;
-            }
+            // Perbarui Badge HUD di Atas
+            badgeTitle.innerText = data.name;
+            badgeCat.innerText = data.cat;
             modelBadge.style.borderColor = data.color;
-
-            // 5. Tampilkan Top Bar
             arUiOverlay.style.display = 'flex';
+
+            showToast(isSwitching ? `🔄 Ganti ke ${data.name}!` : `🏎️ ${data.name} Melaju Masuk!`);
+
+            if (viewer) {
+                // Posisi menghadap depan dan hentikan rotasi saat sedang meluncur
+                viewer.cameraOrbit = '0deg 75deg 105%';
+                viewer.autoRotate = false;
+                viewer.classList.remove('drive-out');
+                viewer.classList.add('active');
+                viewer.classList.add('drive-in');
+
+                // Setelah mobil sampai di depan (780ms), mulai rotasi interaktif 3D & nyalakan F1 Theme Music
+                setTimeout(() => {
+                    viewer.classList.remove('drive-in');
+                    viewer.autoRotate = true;
+                    isTransitioning = false;
+
+                    // Nyalakan Theme Sound Formula 1 (Brian Tyler) saat user melihat-lihat model 3D
+                    startF1Theme();
+                }, 780);
+            } else {
+                isTransitioning = false;
+            }
 
             isScanning = true;
         }
 
-        // Kembali ke Mode Scan / Scan Model Lain
+        // Kembali ke Mode Scanner (Mobil Aktif Melaju Pergi Dahulu)
         function resetToScanner() {
+            if (isTransitioning) return;
+            const oldKey = currentActiveModel;
+
+            // Matikan Theme Song saat kembali ke scanner
+            stopF1Theme(true);
+
+            if (oldKey) {
+                const oldViewer = document.getElementById(`mv-${oldKey}`);
+                if (oldViewer) {
+                    isTransitioning = true;
+                    playF1EngineSound('out');
+                    triggerSpeedFx();
+                    oldViewer.autoRotate = false;
+                    oldViewer.classList.remove('drive-in');
+                    oldViewer.classList.add('drive-out');
+
+                    setTimeout(() => {
+                        oldViewer.classList.remove('active', 'drive-out');
+                        finishReset();
+                    }, 430);
+                    return;
+                }
+            }
+
+            finishReset();
+        }
+
+        function finishReset() {
             currentActiveModel = null;
             document.querySelectorAll('.ar-model-viewer').forEach(el => {
-                el.classList.remove('active');
+                el.classList.remove('active', 'drive-in', 'drive-out');
             });
             arUiOverlay.style.display = 'none';
             scannerOverlay.style.display = 'flex';
             lastScannedText = '';
             isScanning = true;
+            isTransitioning = false;
 
             const url = new URL(window.location);
             url.searchParams.delete('model');
@@ -751,7 +1364,9 @@
             const rawParam = params.get('model') || params.get('mobil') || params.get('car') || '';
             const matchedKey = resolveModelKey(rawParam);
             if (matchedKey) {
-                displayModelInLiveAR(matchedKey);
+                setTimeout(() => {
+                    switchVehicleTo(matchedKey);
+                }, 500);
             }
         });
     </script>

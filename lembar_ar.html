@@ -204,14 +204,68 @@
         }
 
         @media print {
-            body { background: #fff; color: #000; padding: 0; }
-            .container { box-shadow: none; border: none; padding: 5px; max-width: 100%; color: #000; background: #fff; }
-            .card { background: #fff; border: 1px solid #aaa; color: #000; }
-            .card h2, h1 { color: #000; }
-            .card p, p.desc { color: #555; }
-            .card-badge { color: #fff !important; }
-            .instructions { background: #f8fafc; border: 1px solid #ddd; color: #000; }
-            .btn-group { display: none; }
+            body {
+                background: #fff !important;
+                color: #000 !important;
+                padding: 10px !important;
+            }
+            .container {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                background: #fff !important;
+                color: #000 !important;
+            }
+            .tag, .desc, .btn-group {
+                display: none !important;
+            }
+            h1 {
+                font-size: 1.35rem !important;
+                margin-bottom: 12px !important;
+                color: #000 !important;
+            }
+            .cards-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 24px !important;
+            }
+            .card {
+                background: #fff !important;
+                border: 2px solid #000 !important;
+                color: #000 !important;
+                page-break-inside: avoid !important;
+                padding: 18px 12px !important;
+            }
+            .card h2 {
+                color: #000 !important;
+                font-size: 1.15rem !important;
+            }
+            .card p {
+                color: #444 !important;
+                margin-bottom: 10px !important;
+            }
+            .card-badge {
+                color: #000 !important;
+                border: 1px solid #000 !important;
+                background: transparent !important;
+            }
+            .qr-wrapper {
+                background: #fff !important;
+                border: 2px solid #000 !important;
+                padding: 12px !important;
+                box-shadow: none !important;
+                display: inline-block !important;
+            }
+            .qr-img {
+                width: 195px !important;
+                height: 195px !important;
+                display: block !important;
+                image-rendering: -webkit-optimize-contrast;
+            }
+            .instructions {
+                display: none !important;
+            }
         }
     </style>
 </head>
