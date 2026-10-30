@@ -708,6 +708,8 @@
         const modelLoader = document.getElementById('model-loader');
         const loaderText = document.getElementById('loader-text');
 
+        const loadedModelKeys = new Set();
+
         // Setup Event Listener pada Single Model Viewer (Hemat Memori & Loading Cepat)
         if (mainViewer) {
             mainViewer.addEventListener('progress', (e) => {
@@ -719,6 +721,9 @@
 
             mainViewer.addEventListener('load', () => {
                 hideLoader();
+                if (currentActiveModel) {
+                    loadedModelKeys.add(currentActiveModel);
+                }
                 console.log(`✅ Model 3D berhasil dimuat ke GPU!`);
             });
 
@@ -730,7 +735,7 @@
 
         function showLoader(vehicleName) {
             if (modelLoader) {
-                if (loaderText) loaderText.innerText = `Memuat ${vehicleName || 'Model 3D'}...`;
+                if (loaderText) loaderText.innerText = `Memuat ${vehicleName || 'Model 3D'}... 0%`;
                 modelLoader.classList.add('show');
             }
         }
@@ -738,6 +743,42 @@
         function hideLoader() {
             if (modelLoader) {
                 modelLoader.classList.remove('show');
+            }
+        }
+
+        // Mengunduh Model 3D hingga 100% Selesai Sebelum Membunyikan Suara
+        async function ensureModelPreloaded(key) {
+            if (loadedModelKeys.has(key)) return;
+            const data = VEHICLES[key];
+            if (!data || !data.src) return;
+
+            showLoader(data.name);
+
+            try {
+                const response = await fetch(data.src);
+                if (!response.ok) throw new Error('Fetch failed');
+
+                const contentLength = +response.headers.get('Content-Length');
+                const reader = response.body ? response.body.getReader() : null;
+
+                if (reader && contentLength) {
+                    let received = 0;
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        received += value.length;
+                        const pct = Math.min(100, Math.round((received / contentLength) * 100));
+                        if (loaderText) {
+                            loaderText.innerText = `Memuat ${data.name}... ${pct}%`;
+                        }
+                    }
+                }
+                loadedModelKeys.add(key);
+            } catch (e) {
+                console.warn('Preload fetch fallback:', e);
+                loadedModelKeys.add(key);
+            } finally {
+                hideLoader();
             }
         }
 
@@ -1227,8 +1268,8 @@
             requestAnimationFrame(scanLoop);
         }
 
-        // Mengatur Transisi Pergantian Mobil (Mobil Lama Melaju Keluar -> Mobil Baru Melaju Masuk)
-        function switchVehicleTo(newKey) {
+        // Mengatur Transisi Pergantian Mobil (Tunggu 100% Terload Baru Muncul Suara Keluar & Masuk)
+        async function switchVehicleTo(newKey) {
             if (!VEHICLES[newKey] || isTransitioning) return;
             if (currentActiveModel === newKey) return;
 
@@ -1236,21 +1277,23 @@
             const oldKey = currentActiveModel;
             const newData = VEHICLES[newKey];
 
-            // Hentikan background music sementara agar suara mesin terdengar jelas
-            stopF1Theme(true);
+            // 1. JIKA MODEL BELUM 100% TERLOAD, UNDUH HINGGA SELESAI (SUARA BELUM DIBUNYIKAN)
+            if (!loadedModelKeys.has(newKey)) {
+                await ensureModelPreloaded(newKey);
+            }
 
-            // Sembunyikan Kotak Bidik Scanner
+            // 2. SETELAH 100% SELESAI, BARU JALANKAN SUARA & ANIMASI KELUAR / MASUK
+            stopF1Theme(true);
             scannerOverlay.style.display = 'none';
 
-            // KASUS 1: Sudah ada mobil yang sedang tampil -> Mobil lama melaju pergi dulu
+            // KASUS 1: Ada mobil lama yang sedang tampil -> Mobil lama melaju keluar dulu dengan suara
             if (oldKey && oldKey !== newKey && mainViewer && mainViewer.classList.contains('active')) {
-                console.log(`🚀 Mobil ${oldKey} melaju pergi keluar layar...`);
+                console.log(`🚀 Model 100% siap. Mobil ${oldKey} melaju pergi...`);
 
-                // Mainkan Sound F1 Melaju Pergi + Efek Kecepatan
+                // BARU MAINKAN SOUND KELUAR
                 playF1EngineSound('out');
                 triggerSpeedFx();
 
-                // Hentikan putaran rotasi saat melaju
                 mainViewer.autoRotate = false;
                 mainViewer.classList.remove('drive-in');
                 mainViewer.classList.add('drive-out');
@@ -1274,7 +1317,10 @@
             console.log(`🏎️ Mobil ${key} melaju masuk ke depan!`);
             currentActiveModel = key;
 
-            // Mainkan Sound Formula 1 Melaju Masuk + Efek Kecepatan
+            // Pasang src model yang sudah 100% di-cache
+            mainViewer.src = data.src;
+
+            // BARU MAINKAN SOUND FORMULA 1 MASUK
             playF1EngineSound('in');
             triggerSpeedFx();
 
@@ -1286,32 +1332,21 @@
 
             showToast(isSwitching ? `🔄 Ganti ke ${data.name}!` : `🏎️ ${data.name} Melaju Masuk!`);
 
-            if (mainViewer) {
-                // Pasang src model hanya jika berbeda (hemat bandwidth & VRAM)
-                const currentSrc = mainViewer.getAttribute('src');
-                if (currentSrc !== data.src) {
-                    showLoader(data.name);
-                    mainViewer.src = data.src;
-                }
+            // Posisi menghadap depan dan jalankan animasi meluncur masuk
+            mainViewer.cameraOrbit = '0deg 75deg 105%';
+            mainViewer.autoRotate = false;
+            mainViewer.classList.remove('drive-out');
+            mainViewer.classList.add('active', 'drive-in');
 
-                // Posisi menghadap depan dan hentikan rotasi saat sedang meluncur
-                mainViewer.cameraOrbit = '0deg 75deg 105%';
-                mainViewer.autoRotate = false;
-                mainViewer.classList.remove('drive-out');
-                mainViewer.classList.add('active', 'drive-in');
-
-                // Setelah mobil sampai di depan (780ms), mulai rotasi interaktif 3D & nyalakan F1 Theme Music
-                setTimeout(() => {
-                    mainViewer.classList.remove('drive-in');
-                    mainViewer.autoRotate = true;
-                    isTransitioning = false;
-
-                    // Nyalakan Theme Sound Formula 1 (Brian Tyler) saat user melihat-lihat model 3D
-                    startF1Theme();
-                }, 780);
-            } else {
+            // Setelah mobil sampai di depan (780ms), mulai rotasi interaktif 3D & nyalakan F1 Theme Music
+            setTimeout(() => {
+                mainViewer.classList.remove('drive-in');
+                mainViewer.autoRotate = true;
                 isTransitioning = false;
-            }
+
+                // Nyalakan Theme Sound Formula 1 (Brian Tyler) saat user melihat-lihat model 3D
+                startF1Theme();
+            }, 780);
 
             isScanning = true;
         }
