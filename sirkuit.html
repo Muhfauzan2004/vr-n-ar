@@ -13,6 +13,7 @@
 
     <!-- Three.js & Loaders -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
@@ -681,6 +682,54 @@
         let carModel = null;
         const loader = new THREE.GLTFLoader();
 
+        // Dukungan Draco Mesh Compression untuk GLB
+        const dracoLoader = new THREE.DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+        loader.setDRACOLoader(dracoLoader);
+
+        function createFallbackCar(colorHex) {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.8, roughness: 0.2 });
+            const blackMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+            
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 4.5), bodyMat);
+            body.position.y = 0.35;
+            body.castShadow = true;
+            group.add(body);
+            
+            const nose = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.8, 4), bodyMat);
+            nose.rotation.x = Math.PI / 2;
+            nose.position.set(0, 0.25, 2.5);
+            nose.castShadow = true;
+            group.add(nose);
+
+            const fWing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.08, 0.6), blackMat);
+            fWing.position.set(0, 0.15, 3.1);
+            fWing.castShadow = true;
+            group.add(fWing);
+
+            const rWing = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.7), blackMat);
+            rWing.position.set(0, 0.95, -2.1);
+            rWing.castShadow = true;
+            group.add(rWing);
+
+            const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.45, 16);
+            wheelGeo.rotateZ(Math.PI / 2);
+            [
+                [-1.1, 0.42, 1.6],
+                [1.1, 0.42, 1.6],
+                [-1.15, 0.45, -1.5],
+                [1.15, 0.45, -1.5]
+            ].forEach(pos => {
+                const w = new THREE.Mesh(wheelGeo, blackMat);
+                w.position.set(pos[0], pos[1], pos[2]);
+                w.castShadow = true;
+                group.add(w);
+            });
+
+            return group;
+        }
+
         document.getElementById('loader-status').innerText = `Mengunduh 3D Model: ${carData.name}...`;
 
         loader.load(carData.src, (gltf) => {
@@ -719,11 +768,17 @@
                 document.getElementById('loader-status').innerText = `Memuat ${carData.name}... ${p}%`;
             }
         }, (err) => {
-            console.error('Error loading car:', err);
-            document.getElementById('loader-status').innerText = 'Gagal memuat mobil. Memulai sirkuit...';
-            setTimeout(() => {
-                document.getElementById('circuit-loader').style.display = 'none';
-            }, 1000);
+            console.warn('Gagal memuat GLTF utama, mengaktifkan mobil cadangan:', err);
+            document.getElementById('loader-status').innerText = 'Menggunakan model mobil cadangan...';
+            carModel = createFallbackCar(carData.color || 0xe10600);
+            scene.add(carModel);
+            const loaderEl = document.getElementById('circuit-loader');
+            loaderEl.classList.add('fade-out');
+            setTimeout(() => loaderEl.style.display = 'none', 500);
+            if (soundEnabled) {
+                playBgmTheme();
+                playCarEngineAudio();
+            }
         });
 
         // ========================================================
