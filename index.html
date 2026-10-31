@@ -801,10 +801,13 @@
             if (soundEnabled) {
                 unlockAudio();
                 if (currentActiveModel) {
-                    startF1Theme();
+                    // Saat model mobil muncul, hanya mainkan sound mesin mobil
                     if (VEHICLES[currentActiveModel] && VEHICLES[currentActiveModel].sound) {
                         startCarEngineSound(VEHICLES[currentActiveModel].sound);
                     }
+                } else {
+                    // Di tampilan awal scanner sebelum scan, mainkan F1 Theme Song
+                    startF1Theme();
                 }
             } else {
                 stopF1Theme(false);
@@ -831,14 +834,19 @@
                 if (outEl && outEl.paused) { outEl.load(); }
                 if (themeEl && themeEl.paused) { themeEl.load(); }
                 if (engEl && engEl.paused) { engEl.load(); }
+
+                // Jika di tampilan awal scanner dan belum ada mobil aktif, mulai putar F1 Theme Song
+                if (!currentActiveModel && soundEnabled) {
+                    startF1Theme();
+                }
             } catch (e) {}
         }
         window.addEventListener('click', unlockAudio, { passive: true });
         window.addEventListener('touchstart', unlockAudio, { passive: true });
 
-        // Memutar Theme Song Resmi Formula 1 (Brian Tyler) Saat User Melihat-lihat Model 3D
+        // Memutar Theme Song Resmi Formula 1 (Brian Tyler) di Tampilan Awal Scanner
         function startF1Theme() {
-            if (!soundEnabled) return;
+            if (!soundEnabled || currentActiveModel) return; // Tidak diputar jika model 3D mobil sedang aktif
             const themeEl = document.getElementById('snd-f1-theme');
             if (!themeEl) return;
 
@@ -1437,14 +1445,11 @@
             mainViewer.classList.remove('drive-out');
             mainViewer.classList.add('active', 'drive-in');
 
-            // Setelah mobil sampai di depan (780ms), mulai rotasi interaktif 3D & nyalakan F1 Theme Music
+            // Setelah mobil sampai di depan (780ms), mulai rotasi interaktif 3D (Hanya sound mobil yang aktif)
             setTimeout(() => {
                 mainViewer.classList.remove('drive-in');
                 mainViewer.autoRotate = true;
                 isTransitioning = false;
-
-                // Nyalakan Theme Sound Formula 1 (Brian Tyler) saat user melihat-lihat model 3D
-                startF1Theme();
             }, 780);
 
             isScanning = true;
@@ -1455,8 +1460,7 @@
             if (isTransitioning) return;
             const oldKey = currentActiveModel;
 
-            // Matikan Theme Song & Suara Mesin saat kembali ke scanner
-            stopF1Theme(true);
+            // Matikan Suara Mesin mobil saat kembali ke scanner
             stopCarEngineSound(true);
 
             if (oldKey && mainViewer && mainViewer.classList.contains('active')) {
@@ -1490,6 +1494,9 @@
             isScanning = true;
             isTransitioning = false;
 
+            // Kembali ke tampilan awal: nyalakan kembali Theme Song F1
+            startF1Theme();
+
             const url = new URL(window.location);
             url.searchParams.delete('model');
             window.history.replaceState({}, '', url);
@@ -1512,6 +1519,9 @@
                 setTimeout(() => {
                     switchVehicleTo(matchedKey);
                 }, 500);
+            } else {
+                // Di tampilan awal sebelum discan, putar theme song F1
+                startF1Theme();
             }
         });
 
