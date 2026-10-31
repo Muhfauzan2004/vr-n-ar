@@ -550,6 +550,8 @@
     <audio id="snd-f1-in" src="./f1_drive_in.wav" preload="auto"></audio>
     <audio id="snd-f1-out" src="./f1_drive_out.wav" preload="auto"></audio>
     <audio id="snd-f1-theme" src="./f1_theme.m4a" loop preload="auto"></audio>
+    <!-- Audio Mesin Asli Khusus Masing-masing Mobil F1 -->
+    <audio id="snd-car-engine" loop preload="auto"></audio>
 
     <!-- Speed Lines Effect During Car Drive In / Out -->
     <div id="speed-fx" class="speed-fx">
@@ -648,31 +650,36 @@
                 name: 'Red Bull Racing RB19',
                 cat: 'Oracle Red Bull • Formula 1',
                 color: '#0284c7',
-                src: './redbull_RB19.glb'
+                src: './redbull_RB19.glb',
+                sound: './redbull_sound.mp3'
             },
             'ferrari': {
                 name: 'Ferrari F1-75',
                 cat: 'Scuderia Ferrari • Formula 1',
                 color: '#e11d48',
-                src: './ferarri_f1-75.glb'
+                src: './ferarri_f1-75.glb',
+                sound: './ferrari_sound.mp3'
             },
             'mercedes': {
                 name: 'Mercedes-AMG F1 W15',
                 cat: 'Mercedes-AMG PETRONAS • Formula 1',
                 color: '#00a19c',
-                src: './mercy-w15.glb'
+                src: './mercy-w15.glb',
+                sound: './mercedes_sound.mp3'
             },
             'astonmartin': {
                 name: 'Aston Martin AMR23',
                 cat: 'Aston Martin Aramco • Formula 1',
                 color: '#00594f',
-                src: './f1-amr23.glb'
+                src: './f1-amr23.glb',
+                sound: './astonmartin_sound.mp3'
             },
             'ducati': {
                 name: 'Ducati Desmosedici GP',
                 cat: 'Ducati Lenovo • MotoGP',
                 color: '#f59e0b',
-                src: './ducati_desmo.glb'
+                src: './ducati_desmo.glb',
+                sound: './f1_drive_in.wav'
             }
         };
 
@@ -795,9 +802,13 @@
                 unlockAudio();
                 if (currentActiveModel) {
                     startF1Theme();
+                    if (VEHICLES[currentActiveModel] && VEHICLES[currentActiveModel].sound) {
+                        startCarEngineSound(VEHICLES[currentActiveModel].sound);
+                    }
                 }
             } else {
                 stopF1Theme(false);
+                stopCarEngineSound(false);
             }
         }
 
@@ -815,9 +826,11 @@
                 const inEl = document.getElementById('snd-f1-in');
                 const outEl = document.getElementById('snd-f1-out');
                 const themeEl = document.getElementById('snd-f1-theme');
+                const engEl = document.getElementById('snd-car-engine');
                 if (inEl && inEl.paused) { inEl.load(); }
                 if (outEl && outEl.paused) { outEl.load(); }
                 if (themeEl && themeEl.paused) { themeEl.load(); }
+                if (engEl && engEl.paused) { engEl.load(); }
             } catch (e) {}
         }
         window.addEventListener('click', unlockAudio, { passive: true });
@@ -890,10 +903,91 @@
             }, 35);
         }
 
+        let engineFadeTimer = null;
+
+        // Memutar Sound Mesin Asli Khusus Mobil F1 (Red Bull, Ferrari, Mercedes, Aston Martin)
+        function startCarEngineSound(soundUrl) {
+            if (!soundEnabled || !soundUrl) return;
+            const engEl = document.getElementById('snd-car-engine');
+            if (!engEl) return;
+
+            if (engineFadeTimer) {
+                clearInterval(engineFadeTimer);
+                engineFadeTimer = null;
+            }
+
+            try {
+                // Pasang file audio mobil spesifik jika berbeda
+                if (!engEl.src.endsWith(soundUrl.replace(/^\.\//, ''))) {
+                    engEl.src = soundUrl;
+                    engEl.load();
+                }
+                engEl.currentTime = 0;
+                engEl.volume = 0.05;
+                const playPromise = engEl.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        let vol = 0.05;
+                        engineFadeTimer = setInterval(() => {
+                            vol += 0.05;
+                            if (vol >= 0.65) {
+                                vol = 0.65;
+                                clearInterval(engineFadeTimer);
+                                engineFadeTimer = null;
+                            }
+                            engEl.volume = vol;
+                        }, 50);
+                    }).catch(e => {
+                        console.log('Autoplay car engine sound prevented:', e);
+                    });
+                }
+            } catch (e) {
+                console.warn('Car engine sound error:', e);
+            }
+        }
+
+        // Menghentikan Sound Mesin Mobil dengan Fade Out Halus
+        function stopCarEngineSound(fadeOut = true) {
+            const engEl = document.getElementById('snd-car-engine');
+            if (!engEl) return;
+
+            if (engineFadeTimer) {
+                clearInterval(engineFadeTimer);
+                engineFadeTimer = null;
+            }
+
+            if (!fadeOut) {
+                engEl.pause();
+                engEl.currentTime = 0;
+                return;
+            }
+
+            let vol = engEl.volume;
+            engineFadeTimer = setInterval(() => {
+                vol -= 0.1;
+                if (vol <= 0.04) {
+                    engEl.pause();
+                    engEl.currentTime = 0;
+                    engEl.volume = 0.65;
+                    clearInterval(engineFadeTimer);
+                    engineFadeTimer = null;
+                } else {
+                    engEl.volume = vol;
+                }
+            }, 30);
+        }
+
         // Sistem Suara Formula 1 (Kombinasi File Audio + Web Audio Synthesizer Otomatis)
-        function playF1EngineSound(type = 'in') {
+        function playF1EngineSound(type = 'in', vehicleKey = null) {
             if (!soundEnabled) return;
             unlockAudio();
+
+            // Putar sound mesin mobil autentik jika mobil masuk
+            if (type === 'in' && vehicleKey && VEHICLES[vehicleKey] && VEHICLES[vehicleKey].sound) {
+                startCarEngineSound(VEHICLES[vehicleKey].sound);
+            } else if (type === 'out') {
+                stopCarEngineSound(true);
+            }
 
             // 1. Coba putar file audio pre-rendered untuk kualitas maksimal
             let audioPlayed = false;
@@ -1287,6 +1381,7 @@
 
             // 2. SETELAH 100% SELESAI, BARU JALANKAN SUARA & ANIMASI KELUAR / MASUK
             stopF1Theme(true);
+            stopCarEngineSound(true);
             scannerOverlay.style.display = 'none';
 
             // KASUS 1: Ada mobil lama yang sedang tampil -> Mobil lama melaju keluar dulu dengan suara
@@ -1324,7 +1419,8 @@
             mainViewer.src = data.src;
 
             // BARU MAINKAN SOUND FORMULA 1 MASUK
-            playF1EngineSound('in');
+            // Putar sound mesin autentik khusus mobil yang discan (Red Bull, Ferrari, Mercedes, Aston Martin)
+            playF1EngineSound('in', key);
             triggerSpeedFx();
 
             // Perbarui Badge HUD di Atas
@@ -1359,8 +1455,9 @@
             if (isTransitioning) return;
             const oldKey = currentActiveModel;
 
-            // Matikan Theme Song saat kembali ke scanner
+            // Matikan Theme Song & Suara Mesin saat kembali ke scanner
             stopF1Theme(true);
+            stopCarEngineSound(true);
 
             if (oldKey && mainViewer && mainViewer.classList.contains('active')) {
                 isTransitioning = true;

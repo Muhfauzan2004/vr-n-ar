@@ -1,5 +1,5 @@
 // Service Worker: Caching Aset 3D & Audio agar WebAR Super Ringan & Bisa Offline
-const CACHE_NAME = 'webar-racing-v2';
+const CACHE_NAME = 'webar-racing-v3';
 
 const PRECACHE_ASSETS = [
   './index.html',
@@ -33,7 +33,7 @@ self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
   // Cache GLB 3D models and audio files dynamically as they are fetched
-  if (url.includes('.glb') || url.includes('.wav') || url.includes('.m4a') || url.includes('.png')) {
+  if (url.includes('.glb') || url.includes('.wav') || url.includes('.m4a') || url.includes('.mp3') || url.includes('.png')) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {

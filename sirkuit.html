@@ -362,6 +362,7 @@
 
     <!-- Audio Elements -->
     <audio id="bgm-theme" src="./f1_theme.m4a" loop preload="auto"></audio>
+    <audio id="car-engine-audio" loop preload="auto"></audio>
 
     <script>
         // Data Kendaraan & Model 3D
@@ -371,6 +372,7 @@
                 cat: 'Oracle Red Bull • Formula 1',
                 color: '#0284c7',
                 src: './redbull_RB19.glb',
+                sound: './redbull_sound.mp3',
                 scale: 1.0,
                 yOffset: 0.05
             },
@@ -379,6 +381,7 @@
                 cat: 'Scuderia Ferrari • Formula 1',
                 color: '#e11d48',
                 src: './ferarri_f1-75.glb',
+                sound: './ferrari_sound.mp3',
                 scale: 1.0,
                 yOffset: 0.05
             },
@@ -387,6 +390,7 @@
                 cat: 'Mercedes-AMG PETRONAS • Formula 1',
                 color: '#00a19c',
                 src: './mercy-w15.glb',
+                sound: './mercedes_sound.mp3',
                 scale: 1.0,
                 yOffset: 0.05
             },
@@ -395,6 +399,7 @@
                 cat: 'Aston Martin Aramco • Formula 1',
                 color: '#00594f',
                 src: './f1-amr23.glb',
+                sound: './astonmartin_sound.mp3',
                 scale: 1.0,
                 yOffset: 0.05
             },
@@ -403,6 +408,7 @@
                 cat: 'Ducati Lenovo • MotoGP',
                 color: '#f59e0b',
                 src: './ducati_desmo.glb',
+                sound: './f1_drive_in.wav',
                 scale: 1.1,
                 yOffset: 0.08
             }
@@ -702,9 +708,10 @@
             loaderEl.classList.add('fade-out');
             setTimeout(() => loaderEl.style.display = 'none', 500);
 
-            // Mulai musik tema jika suara aktif
+            // Mulai musik tema & suara mesin asli jika suara aktif
             if (soundEnabled) {
                 playBgmTheme();
+                playCarEngineAudio();
             }
         }, (xhr) => {
             if (xhr.lengthComputable) {
@@ -806,13 +813,30 @@
             }
         }
 
+        // Putar Suara Mesin Asli Khusus Mobil yang Dipilih
+        function playCarEngineAudio() {
+            const engAudio = document.getElementById('car-engine-audio');
+            if (engAudio && soundEnabled && carData.sound) {
+                if (!engAudio.src.endsWith(carData.sound.replace(/^\.\//, ''))) {
+                    engAudio.src = carData.sound;
+                }
+                engAudio.volume = 0.55;
+                engAudio.play().catch(() => {});
+            }
+        }
+
         function toggleSound() {
             soundEnabled = !soundEnabled;
             document.getElementById('sound-btn').innerText = soundEnabled ? '🔊' : '🔇';
             const bgm = document.getElementById('bgm-theme');
+            const engAudio = document.getElementById('car-engine-audio');
             if (bgm) {
                 if (soundEnabled) bgm.play().catch(() => {});
                 else bgm.pause();
+            }
+            if (engAudio) {
+                if (soundEnabled) playCarEngineAudio();
+                else engAudio.pause();
             }
             if (engineGain && audioCtx) {
                 engineGain.gain.setValueAtTime(soundEnabled ? 0.22 : 0, audioCtx.currentTime);
@@ -822,6 +846,7 @@
         window.addEventListener('click', () => {
             if (!audioCtx) initEngineAudio();
             playBgmTheme();
+            playCarEngineAudio();
         }, { once: true });
 
         // Animasi Loop Balapan
@@ -893,6 +918,12 @@
                     const targetFreq = 160 + (currentSpeedKmh * 3.8);
                     engineOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.08);
                 }
+                const engAudio = document.getElementById('car-engine-audio');
+                if (engAudio && soundEnabled && !engAudio.paused) {
+                    // Modulasi pitch suara mesin asli sesuai kecepatan mobil (0.85x s/d 1.35x)
+                    const targetRate = Math.min(1.35, Math.max(0.85, 0.85 + (currentSpeedKmh / 350) * 0.45));
+                    engAudio.playbackRate = targetRate;
+                }
 
                 // ========================================================
                 // 4. SISTEM KAMERA INTERAKTIF (CHASE / DRONE / COCKPIT)
@@ -934,3 +965,4 @@
 </body>
 
 </html>
+
