@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>3D F1 Grand Prix Circuit Simulation</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Three.js & Loaders -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --f1-red: #e10600;
+            --f1-cyan: #38bdf8;
+            --f1-dark: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #090d16;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #fff;
+        }
+
+        #webgl-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+        }
+
+        /* ========================================================
+           HUD & OVERLAYS
+        ======================================================== */
+        .hud-top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
+            pointer-events: none;
+        }
+
+        .hud-top-bar > * {
+            pointer-events: auto;
+        }
+
+        .nav-back-btn {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 9px 16px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            transition: all 0.2s;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .nav-back-btn:active {
+            transform: scale(0.95);
+            background: #e11d48;
+        }
+
+        .car-badge {
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid #0284c7;
+            padding: 8px 18px;
+            border-radius: 25px;
+            backdrop-filter: blur(12px);
+            text-align: right;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .badge-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+
+        .badge-cat {
+            font-size: 0.7rem;
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        /* Telemetry Dashboard (Speedometer & Lap Time) */
+        .hud-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            padding: 16px 20px 24px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            background: linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0) 100%);
+            pointer-events: none;
+        }
+
+        .hud-bottom-bar > * {
+            pointer-events: auto;
+        }
+
+        /* Speedometer Card */
+        .speedo-card {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 20px;
+            padding: 12px 18px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+            min-width: 150px;
+        }
+
+        .rpm-leds {
+            display: flex;
+            gap: 3px;
+            width: 100%;
+        }
+
+        .rpm-dot {
+            flex: 1;
+            height: 5px;
+            border-radius: 3px;
+            background: #334155;
+            transition: background 0.08s;
+        }
+
+        .rpm-dot.green.active { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+        .rpm-dot.red.active { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+        .rpm-dot.blue.active { background: #3b82f6; box-shadow: 0 0 8px #60a5fa; }
+
+        .speedo-content {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+        }
+
+        .speedo-val {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.1rem;
+            font-weight: 900;
+            color: #f8fafc;
+            line-height: 1;
+        }
+
+        .speedo-unit {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-left: 4px;
+        }
+
+        .gear-badge {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: #eab308;
+            background: rgba(234, 179, 8, 0.15);
+            padding: 2px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(234, 179, 8, 0.4);
+        }
+
+        /* Action Controls Buttons (Bottom Right) */
+        .controls-card {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .hud-btn {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.15s;
+        }
+
+        .hud-btn:active {
+            transform: scale(0.92);
+        }
+
+        .hud-btn.drs-btn {
+            background: linear-gradient(135deg, #059669, #10b981);
+            border: none;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+            animation: pulseDRS 1.5s infinite alternate;
+        }
+
+        @keyframes pulseDRS {
+            from { box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+            to { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+        }
+
+        /* Lap Timer Badge */
+        .lap-badge {
+            position: fixed;
+            top: 75px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            z-index: 15;
+            backdrop-filter: blur(8px);
+            pointer-events: none;
+        }
+
+        /* Loading Screen */
+        #circuit-loader {
+            position: fixed;
+            inset: 0;
+            background: #090d16;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            transition: opacity 0.5s ease;
+        }
+
+        #circuit-loader.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-spin {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #38bdf8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 3D WebGL Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Loading Screen -->
+    <div id="circuit-loader">
+        <div class="loader-spin"></div>
+        <div style="font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: 800; color: #f8fafc;">
+            MEMASUKI SIRKUIT GRAND PRIX...
+        </div>
+        <div id="loader-status" style="font-size: 0.85rem; color: #94a3b8;">
+            Menyiapkan Trek & Model 3D Mobil...
+        </div>
+    </div>
+
+    <!-- Lap Timer HUD -->
+    <div class="lap-badge">
+        ⏱️ LAP <span id="lap-counter" style="color: #38bdf8;">1</span> • <span id="lap-time" style="color: #22c55e;">00:00.00</span>
+    </div>
+
+    <!-- Top Navigation HUD -->
+    <div class="hud-top-bar">
+        <a href="./index.html" class="nav-back-btn" id="btn-back">
+            📷 Kembali ke AR
+        </a>
+        <div class="car-badge" id="hud-car-badge">
+            <div class="badge-title" id="hud-car-name">Red Bull RB19</div>
+            <div class="badge-cat" id="hud-car-cat">Grand Prix Circuit Mode</div>
+        </div>
+    </div>
+
+    <!-- Bottom Telemetry HUD -->
+    <div class="hud-bottom-bar">
+        <!-- Speedometer & Tachometer -->
+        <div class="speedo-card">
+            <div class="rpm-leds" id="rpm-bar">
+                <div class="rpm-dot green"></div>
+                <div class="rpm-dot green"></div>
+                <div class="rpm-dot green"></div>
+                <div class="rpm-dot red"></div>
+                <div class="rpm-dot red"></div>
+                <div class="rpm-dot red"></div>
+                <div class="rpm-dot blue"></div>
+                <div class="rpm-dot blue"></div>
+            </div>
+            <div class="speedo-content">
+                <div>
+                    <span class="speedo-val" id="speedo-number">0</span>
+                    <span class="speedo-unit">KM/H</span>
+                </div>
+                <div class="gear-badge" id="gear-indicator">1</div>
+            </div>
+        </div>
+
+        <!-- Camera & DRS Controls -->
+        <div class="controls-card">
+            <button class="hud-btn drs-btn" id="drs-toggle" onclick="toggleDRS()">
+                ⚡ DRS BOOST
+            </button>
+            <button class="hud-btn" onclick="cycleCamera()">
+                🎥 <span id="cam-label">Chase Cam</span>
+            </button>
+            <button class="hud-btn" id="sound-btn" onclick="toggleSound()">
+                🔊
+            </button>
+        </div>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="bgm-theme" src="./f1_theme.m4a" loop preload="auto"></audio>
+
+    <script>
+        // Data Kendaraan & Model 3D
+        const VEHICLES = {
+            'redbull': {
+                name: 'Red Bull Racing RB19',
+                cat: 'Oracle Red Bull • Formula 1',
+                color: '#0284c7',
+                src: './redbull_RB19.glb',
+                scale: 1.0,
+                yOffset: 0.05
+            },
+            'ferrari': {
+                name: 'Ferrari F1-75',
+                cat: 'Scuderia Ferrari • Formula 1',
+                color: '#e11d48',
+                src: './ferarri_f1-75.glb',
+                scale: 1.0,
+                yOffset: 0.05
+            },
+            'mercedes': {
+                name: 'Mercedes-AMG F1 W15',
+                cat: 'Mercedes-AMG PETRONAS • Formula 1',
+                color: '#00a19c',
+                src: './mercy-w15.glb',
+                scale: 1.0,
+                yOffset: 0.05
+            },
+            'astonmartin': {
+                name: 'Aston Martin AMR23',
+                cat: 'Aston Martin Aramco • Formula 1',
+                color: '#00594f',
+                src: './f1-amr23.glb',
+                scale: 1.0,
+                yOffset: 0.05
+            },
+            'ducati': {
+                name: 'Ducati Desmosedici GP',
+                cat: 'Ducati Lenovo • MotoGP',
+                color: '#f59e0b',
+                src: './ducati_desmo.glb',
+                scale: 1.1,
+                yOffset: 0.08
+            }
+        };
+
+        // Ambil parameter model mobil dari URL (contoh: ?model=ferrari)
+        const urlParams = new URLSearchParams(window.location.search);
+        let selectedCarKey = urlParams.get('model') || urlParams.get('mobil') || 'redbull';
+        if (!VEHICLES[selectedCarKey]) selectedCarKey = 'redbull';
+        const carData = VEHICLES[selectedCarKey];
+
+        // Update HUD Info
+        document.getElementById('hud-car-name').innerText = carData.name;
+        document.getElementById('hud-car-badge').style.borderColor = carData.color;
+        document.getElementById('btn-back').href = `./index.html?model=${selectedCarKey}`;
+
+        // Setup Three.js Scene
+        const canvas = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0c1222);
+        scene.fog = new THREE.FogExp2(0x0c1222, 0.0035);
+
+        // Pencahayaan Sirkuit
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.4);
+        sunLight.position.set(120, 200, 100);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 600;
+        const d = 160;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        scene.add(sunLight);
+
+        // Kamera & Controls
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1500);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Jangan tembus ke bawah tanah
+
+        // ========================================================
+        // 1. GENERATE SIRKUIT BALAP F1 (GRAND PRIX LAYOUT)
+        // ========================================================
+        // Jalur Sirkuit: Trek lurus utama, chicane tikungan 1-2, kurva sweeping, hairpin, dan trek lurus belakang
+        const trackCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(0, 0, 140),     // Start / Finish Line
+            new THREE.Vector3(0, 0, 60),      // Main Straight
+            new THREE.Vector3(15, 0, -10),    // Turn 1 Entry
+            new THREE.Vector3(-25, 0, -45),   // Chicane Turn 2
+            new THREE.Vector3(-40, 0, -120),  // Turn 3 Sweeper
+            new THREE.Vector3(20, 0, -160),   // High Speed Curve
+            new THREE.Vector3(90, 0, -130),   // Parabolica
+            new THREE.Vector3(120, 0, -30),   // Back Straight
+            new THREE.Vector3(80, 0, 40),     // Hairpin Entry
+            new THREE.Vector3(45, 0, 75),     // Hairpin Apex
+            new THREE.Vector3(25, 0, 120),    // Final Corner
+        ], true); // Closed circuit loop
+
+        const TRACK_WIDTH = 12.0;
+        const KERB_WIDTH = 1.4;
+        const NUM_SEGMENTS = 400;
+
+        // Bikin Geometri Aspal dan Kerb dari Curve
+        function buildTrackRibbon() {
+            const points = trackCurve.getSpacedPoints(NUM_SEGMENTS);
+            const roadGeo = new THREE.BufferGeometry();
+            const kerbGeoL = new THREE.BufferGeometry();
+            const kerbGeoR = new THREE.BufferGeometry();
+
+            const roadVerts = [];
+            const roadUvs = [];
+            const roadIndices = [];
+
+            const kerbVertsL = [];
+            const kerbUvsL = [];
+            const kerbIndicesL = [];
+
+            const kerbVertsR = [];
+            const kerbUvsR = [];
+            const kerbIndicesR = [];
+
+            const up = new THREE.Vector3(0, 1, 0);
+
+            for (let i = 0; i <= NUM_SEGMENTS; i++) {
+                const t = i / NUM_SEGMENTS;
+                const pt = trackCurve.getPointAt(t);
+                const tangent = trackCurve.getTangentAt(t).normalize();
+                const normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
+
+                // Road Left & Right
+                const pL = pt.clone().addScaledVector(normal, TRACK_WIDTH * 0.5);
+                const pR = pt.clone().addScaledVector(normal, -TRACK_WIDTH * 0.5);
+
+                // Kerb Edges
+                const pKL = pL.clone().addScaledVector(normal, KERB_WIDTH);
+                const pKR = pR.clone().addScaledVector(normal, -KERB_WIDTH);
+
+                // Sedikit elevasi di atas tanah
+                pL.y = 0.05;
+                pR.y = 0.05;
+                pKL.y = 0.08;
+                pKR.y = 0.08;
+
+                // Vertices Aspal
+                roadVerts.push(pL.x, pL.y, pL.z);
+                roadVerts.push(pR.x, pR.y, pR.z);
+                roadUvs.push(0, t * 40);
+                roadUvs.push(1, t * 40);
+
+                // Vertices Kerb Kiri (Merah-Putih)
+                kerbVertsL.push(pKL.x, pKL.y, pKL.z);
+                kerbVertsL.push(pL.x, pL.y, pL.z);
+                kerbUvsL.push(0, t * 120);
+                kerbUvsL.push(1, t * 120);
+
+                // Vertices Kerb Kanan (Merah-Putih)
+                kerbVertsR.push(pR.x, pR.y, pR.z);
+                kerbVertsR.push(pKR.x, pKR.y, pKR.z);
+                kerbUvsR.push(0, t * 120);
+                kerbUvsR.push(1, t * 120);
+
+                if (i < NUM_SEGMENTS) {
+                    const row = i * 2;
+                    roadIndices.push(row, row + 1, row + 2);
+                    roadIndices.push(row + 1, row + 3, row + 2);
+
+                    kerbIndicesL.push(row, row + 1, row + 2);
+                    kerbIndicesL.push(row + 1, row + 3, row + 2);
+
+                    kerbIndicesR.push(row, row + 1, row + 2);
+                    kerbIndicesR.push(row + 1, row + 3, row + 2);
+                }
+            }
+
+            roadGeo.setAttribute('position', new THREE.Float32BufferAttribute(roadVerts, 3));
+            roadGeo.setAttribute('uv', new THREE.Float32BufferAttribute(roadUvs, 2));
+            roadGeo.setIndex(roadIndices);
+            roadGeo.computeVertexNormals();
+
+            kerbGeoL.setAttribute('position', new THREE.Float32BufferAttribute(kerbVertsL, 3));
+            kerbGeoL.setAttribute('uv', new THREE.Float32BufferAttribute(kerbUvsL, 2));
+            kerbGeoL.setIndex(kerbIndicesL);
+            kerbGeoL.computeVertexNormals();
+
+            kerbGeoR.setAttribute('position', new THREE.Float32BufferAttribute(kerbVertsR, 3));
+            kerbGeoR.setAttribute('uv', new THREE.Float32BufferAttribute(kerbUvsR, 2));
+            kerbGeoR.setIndex(kerbIndicesR);
+            kerbGeoR.computeVertexNormals();
+
+            // Material Aspal Balap
+            const roadMat = new THREE.MeshStandardMaterial({
+                color: 0x181a20,
+                roughness: 0.85,
+                metalness: 0.1
+            });
+
+            // Material Kerb Merah Putih
+            const canvasKerb = document.createElement('canvas');
+            canvasKerb.width = 64;
+            canvasKerb.height = 64;
+            const ctxK = canvasKerb.getContext('2d');
+            ctxK.fillStyle = '#e10600';
+            ctxK.fillRect(0, 0, 64, 32);
+            ctxK.fillStyle = '#f8fafc';
+            ctxK.fillRect(0, 32, 64, 32);
+            const kerbTexture = new THREE.CanvasTexture(canvasKerb);
+            kerbTexture.wrapS = THREE.RepeatWrapping;
+            kerbTexture.wrapT = THREE.RepeatWrapping;
+            kerbTexture.repeat.set(1, 60);
+
+            const kerbMat = new THREE.MeshStandardMaterial({
+                map: kerbTexture,
+                roughness: 0.6
+            });
+
+            const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+            roadMesh.receiveShadow = true;
+            scene.add(roadMesh);
+
+            const kerbMeshL = new THREE.Mesh(kerbGeoL, kerbMat);
+            const kerbMeshR = new THREE.Mesh(kerbGeoR, kerbMat);
+            scene.add(kerbMeshL);
+            scene.add(kerbMeshR);
+
+            // Garis Finish Kotak-Kotak (Checkered Finish Line)
+            const finishLineGeo = new THREE.PlaneGeometry(TRACK_WIDTH, 2.5);
+            const canvasFin = document.createElement('canvas');
+            canvasFin.width = 128;
+            canvasFin.height = 32;
+            const ctxFin = canvasFin.getContext('2d');
+            for (let x = 0; x < 16; x++) {
+                for (let y = 0; y < 4; y++) {
+                    ctxFin.fillStyle = (x + y) % 2 === 0 ? '#fff' : '#000';
+                    ctxFin.fillRect(x * 8, y * 8, 8, 8);
+                }
+            }
+            const finTex = new THREE.CanvasTexture(canvasFin);
+            const finMat = new THREE.MeshBasicMaterial({ map: finTex, side: THREE.DoubleSide });
+            const finishMesh = new THREE.Mesh(finishLineGeo, finMat);
+            finishMesh.rotation.x = -Math.PI / 2;
+            finishMesh.position.set(0, 0.08, 140);
+            scene.add(finishMesh);
+
+            // Gantry Start/Finish (Arch Gapura Rolex/F1)
+            const gantryGeo = new THREE.BoxGeometry(TRACK_WIDTH + 6, 1.2, 2.5);
+            const gantryMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
+            const gantry = new THREE.Mesh(gantryGeo, gantryMat);
+            gantry.position.set(0, 6.5, 140);
+            scene.add(gantry);
+
+            const pillarGeo = new THREE.CylinderGeometry(0.5, 0.5, 7, 16);
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 });
+            const p1 = new THREE.Mesh(pillarGeo, pillarMat);
+            p1.position.set(-(TRACK_WIDTH / 2 + 2.5), 3.5, 140);
+            const p2 = new THREE.Mesh(pillarGeo, pillarMat);
+            p2.position.set(TRACK_WIDTH / 2 + 2.5, 3.5, 140);
+            scene.add(p1);
+            scene.add(p2);
+        }
+
+        // Tanah Lapangan Rumput & Bukit Sirkuit
+        function buildEnvironment() {
+            const groundGeo = new THREE.PlaneGeometry(800, 800, 32, 32);
+            const groundMat = new THREE.MeshStandardMaterial({
+                color: 0x142018, // Hijau rumput gelap sirkuit
+                roughness: 0.95
+            });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = 0;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Barrier / Dinding Pengaman di Seputar Trek
+            const barrierGeo = new THREE.BoxGeometry(8, 1.6, 1.5);
+            const barrierMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+            for (let i = 0; i < 50; i++) {
+                const t = i / 50;
+                const pt = trackCurve.getPointAt(t);
+                const tangent = trackCurve.getTangentAt(t).normalize();
+                const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+                
+                const bL = new THREE.Mesh(barrierGeo, barrierMat);
+                bL.position.copy(pt).addScaledVector(normal, TRACK_WIDTH * 0.5 + 4.5);
+                bL.position.y = 0.8;
+                bL.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+                scene.add(bL);
+            }
+        }
+
+        buildTrackRibbon();
+        buildEnvironment();
+
+        // ========================================================
+        // 2. LOAD MODEL 3D MOBIL F1 & SIMULASI BALAPAN
+        // ========================================================
+        let carModel = null;
+        const loader = new THREE.GLTFLoader();
+
+        document.getElementById('loader-status').innerText = `Mengunduh 3D Model: ${carData.name}...`;
+
+        loader.load(carData.src, (gltf) => {
+            carModel = gltf.scene;
+
+            // Auto-scale & Adjust Pivot
+            const bbox = new THREE.Box3().setFromObject(carModel);
+            const size = bbox.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const targetLength = 5.2; // Panjang mobil F1 ~5.2 meter
+            const s = (targetLength / maxDim) * carData.scale;
+            carModel.scale.set(s, s, s);
+
+            carModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+            scene.add(carModel);
+
+            // Sembunyikan layar pemuatan
+            const loaderEl = document.getElementById('circuit-loader');
+            loaderEl.classList.add('fade-out');
+            setTimeout(() => loaderEl.style.display = 'none', 500);
+
+            // Mulai musik tema jika suara aktif
+            if (soundEnabled) {
+                playBgmTheme();
+            }
+        }, (xhr) => {
+            if (xhr.lengthComputable) {
+                const p = Math.round((xhr.loaded / xhr.total) * 100);
+                document.getElementById('loader-status').innerText = `Memuat ${carData.name}... ${p}%`;
+            }
+        }, (err) => {
+            console.error('Error loading car:', err);
+            document.getElementById('loader-status').innerText = 'Gagal memuat mobil. Memulai sirkuit...';
+            setTimeout(() => {
+                document.getElementById('circuit-loader').style.display = 'none';
+            }, 1000);
+        });
+
+        // ========================================================
+        // 3. TELEMETRY, PHYSICS & DRIVE LOOP
+        // ========================================================
+        let trackProgress = 0.0;
+        let baseSpeed = 0.00075;
+        let currentSpeedKmh = 0;
+        let drsActive = false;
+        let currentLap = 1;
+        let lapStartTime = performance.now();
+
+        // Camera Modes: 'chase', 'drone', 'cockpit', 'orbit'
+        const CAM_MODES = ['chase', 'drone', 'cockpit', 'orbit'];
+        let camIndex = 0;
+        let currentCamMode = 'chase';
+
+        function cycleCamera() {
+            camIndex = (camIndex + 1) % CAM_MODES.length;
+            currentCamMode = CAM_MODES[camIndex];
+            const labels = {
+                'chase': 'Chase Cam',
+                'drone': 'Drone Cam',
+                'cockpit': 'Cockpit Cam',
+                'orbit': 'Free Orbit'
+            };
+            document.getElementById('cam-label').innerText = labels[currentCamMode];
+
+            if (currentCamMode === 'orbit') {
+                controls.enabled = true;
+            } else {
+                controls.enabled = false;
+            }
+        }
+
+        function toggleDRS() {
+            drsActive = !drsActive;
+            const btn = document.getElementById('drs-toggle');
+            if (drsActive) {
+                btn.style.background = 'linear-gradient(135deg, #e11d48, #f43f5e)';
+                btn.innerText = '🔥 DRS AKTIF!';
+            } else {
+                btn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+                btn.innerText = '⚡ DRS BOOST';
+            }
+        }
+
+        // Dynamic Engine Audio Pitch Synthesizer
+        let audioCtx = null;
+        let engineOsc = null;
+        let engineGain = null;
+        let soundEnabled = true;
+
+        function initEngineAudio() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                engineOsc = audioCtx.createOscillator();
+                engineGain = audioCtx.createGain();
+
+                engineOsc.type = 'sawtooth';
+                engineOsc.frequency.setValueAtTime(140, audioCtx.currentTime);
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                filter.Q.setValueAtTime(2.5, audioCtx.currentTime);
+
+                engineGain.gain.setValueAtTime(soundEnabled ? 0.22 : 0, audioCtx.currentTime);
+
+                engineOsc.connect(filter);
+                filter.connect(engineGain);
+                engineGain.connect(audioCtx.destination);
+
+                engineOsc.start();
+            } catch (e) {}
+        }
+
+        function playBgmTheme() {
+            const bgm = document.getElementById('bgm-theme');
+            if (bgm && soundEnabled) {
+                bgm.volume = 0.45;
+                bgm.play().catch(() => {});
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-btn').innerText = soundEnabled ? '🔊' : '🔇';
+            const bgm = document.getElementById('bgm-theme');
+            if (bgm) {
+                if (soundEnabled) bgm.play().catch(() => {});
+                else bgm.pause();
+            }
+            if (engineGain && audioCtx) {
+                engineGain.gain.setValueAtTime(soundEnabled ? 0.22 : 0, audioCtx.currentTime);
+            }
+        }
+
+        window.addEventListener('click', () => {
+            if (!audioCtx) initEngineAudio();
+            playBgmTheme();
+        }, { once: true });
+
+        // Animasi Loop Balapan
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+
+            if (carModel) {
+                // Kecepatan adaptif (Kencang di trek lurus, melambat di tikungan)
+                let speedFactor = 1.0;
+                // Tikungan chicane & hairpin
+                if ((trackProgress > 0.18 && trackProgress < 0.42) || (trackProgress > 0.65 && trackProgress < 0.85)) {
+                    speedFactor = 0.58; // Pengereman tikungan
+                } else {
+                    speedFactor = 1.25; // Akselerasi trek lurus
+                }
+
+                if (drsActive) speedFactor *= 1.45; // Boost DRS
+
+                trackProgress = (trackProgress + baseSpeed * speedFactor) % 1.0;
+
+                // Cek putaran Lap
+                if (trackProgress < 0.002 && performance.now() - lapStartTime > 5000) {
+                    currentLap++;
+                    document.getElementById('lap-counter').innerText = currentLap;
+                    lapStartTime = performance.now();
+                }
+
+                // Hitung Lap Time
+                const elapsedLapMs = performance.now() - lapStartTime;
+                const lapSec = Math.floor(elapsedLapMs / 1000);
+                const lapMs = Math.floor((elapsedLapMs % 1000) / 10);
+                document.getElementById('lap-time').innerText = 
+                    `${String(lapSec).padStart(2, '0')}:${String(lapMs).padStart(2, '0')}`;
+
+                // Posisi & Rotasi Mobil di Sepanjang Jalur Sirkuit
+                const currentPos = trackCurve.getPointAt(trackProgress);
+                const tangent = trackCurve.getTangentAt(trackProgress).normalize();
+
+                carModel.position.copy(currentPos);
+                carModel.position.y += carData.yOffset;
+
+                // Arahkan mobil menghadap ke depan sesuai tangent sirkuit
+                const lookAtTarget = currentPos.clone().add(tangent);
+                carModel.lookAt(lookAtTarget);
+
+                // Update Telemetry Speedometer
+                const targetKmh = Math.round(180 * speedFactor + (Math.sin(performance.now() * 0.005) * 6));
+                currentSpeedKmh += (targetKmh - currentSpeedKmh) * 0.12;
+                document.getElementById('speedo-number').innerText = Math.round(currentSpeedKmh);
+
+                // Gear indicator (1 - 8)
+                const gear = Math.min(8, Math.max(1, Math.floor(currentSpeedKmh / 42) + 1));
+                document.getElementById('gear-indicator').innerText = gear;
+
+                // Update RPM LEDs
+                const rpmRatio = (currentSpeedKmh % 45) / 45;
+                const dots = document.querySelectorAll('.rpm-dot');
+                dots.forEach((dot, idx) => {
+                    if (idx / dots.length <= rpmRatio) dot.classList.add('active');
+                    else dot.classList.remove('active');
+                });
+
+                // Update Audio Pitch Suara Mesin
+                if (engineOsc && audioCtx && soundEnabled) {
+                    const targetFreq = 160 + (currentSpeedKmh * 3.8);
+                    engineOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.08);
+                }
+
+                // ========================================================
+                // 4. SISTEM KAMERA INTERAKTIF (CHASE / DRONE / COCKPIT)
+                // ========================================================
+                if (currentCamMode === 'chase') {
+                    // Kamera mengejar di belakang mobil
+                    const cameraOffset = tangent.clone().multiplyScalar(-14).add(new THREE.Vector3(0, 4.8, 0));
+                    camera.position.copy(currentPos).add(cameraOffset);
+                    camera.lookAt(currentPos.clone().add(new THREE.Vector3(0, 1.4, 0)));
+                } else if (currentCamMode === 'drone') {
+                    // Kamera helikopter dari atas
+                    const cameraOffset = tangent.clone().multiplyScalar(-22).add(new THREE.Vector3(0, 26, 0));
+                    camera.position.copy(currentPos).add(cameraOffset);
+                    camera.lookAt(currentPos);
+                } else if (currentCamMode === 'cockpit') {
+                    // Kamera tepat di atas kokpit helm pembalap
+                    const cameraOffset = tangent.clone().multiplyScalar(0.4).add(new THREE.Vector3(0, 1.25, 0));
+                    camera.position.copy(currentPos).add(cameraOffset);
+                    camera.lookAt(currentPos.clone().add(tangent.clone().multiplyScalar(20)));
+                } else if (currentCamMode === 'orbit') {
+                    controls.target.copy(currentPos);
+                    controls.update();
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Responsive Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+
+</body>
+
+</html>

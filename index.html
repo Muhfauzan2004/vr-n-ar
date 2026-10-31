@@ -616,9 +616,12 @@
 
     <!-- 4. Clean Top Bar When Model is Active (No bottom buttons at all) -->
     <div id="ar-ui-overlay">
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <button class="reset-scan-btn" onclick="resetToScanner()">
-                🔍 Scan Model Lain
+                🔍 Scan Lain
+            </button>
+            <button class="reset-scan-btn" onclick="goToCircuit()" style="background: linear-gradient(135deg, #0284c7, #38bdf8); border: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.5);">
+                🏁 Masuk Sirkuit
             </button>
             <button class="sound-toggle-btn cam-switch-btn" onclick="toggleSound()" title="Aktif/Bisu Suara F1" style="width: 38px; height: 38px;">🔊</button>
         </div>
@@ -1393,6 +1396,12 @@
             const url = new URL(window.location);
             url.searchParams.delete('model');
             window.history.replaceState({}, '', url);
+        }
+
+        // Buka Mode Sirkuit 3D Grand Prix dengan Mobil yang Sedang Aktif
+        function goToCircuit() {
+            const key = currentActiveModel || 'redbull';
+            window.location.href = `./sirkuit.html?model=${encodeURIComponent(key)}`;
         }
 
         // Inisialisasi Saat Halaman Dimuat
