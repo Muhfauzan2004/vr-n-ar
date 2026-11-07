@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D F1 Grand Prix Circuit Simulation</title>
+    <title>Marina Bay Street Circuit - 3D F1 Grand Prix</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -301,10 +301,10 @@
     <div id="circuit-loader">
         <div class="loader-spin"></div>
         <div style="font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: 800; color: #f8fafc;">
-            MEMASUKI SIRKUIT GRAND PRIX...
+            MEMASUKI MARINA BAY STREET CIRCUIT...
         </div>
         <div id="loader-status" style="font-size: 0.85rem; color: #94a3b8;">
-            Menyiapkan Trek & Model 3D Mobil...
+            Mengunduh Sirkuit 3D Marina Bay & Model Mobil...
         </div>
     </div>
 
@@ -320,7 +320,7 @@
         </a>
         <div class="car-badge" id="hud-car-badge">
             <div class="badge-title" id="hud-car-name">Red Bull RB19</div>
-            <div class="badge-cat" id="hud-car-cat">Grand Prix Circuit Mode</div>
+            <div class="badge-cat" id="hud-car-cat">Marina Bay • Singapore F1 GP</div>
         </div>
     </div>
 
@@ -435,251 +435,83 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0c1222);
-        scene.fog = new THREE.FogExp2(0x0c1222, 0.0035);
+        scene.background = new THREE.Color(0x060913);
+        scene.fog = new THREE.FogExp2(0x060913, 0.0006);
 
-        // Pencahayaan Sirkuit
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+        // Pencahayaan Sirkuit Malam Hari (Singapore F1 Night GP)
+        const ambientLight = new THREE.AmbientLight(0xdbeafe, 1.15);
         scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.4);
-        sunLight.position.set(120, 200, 100);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 10;
-        sunLight.shadow.camera.far = 600;
-        const d = 160;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
-        scene.add(sunLight);
+        const hemiLight = new THREE.HemisphereLight(0xfff5e6, 0x0f172a, 0.85);
+        scene.add(hemiLight);
+
+        // Floodlight Sirkuit Utama (Pencahayaan Terang Khas Lampu Sirkuit Marina Bay)
+        const trackLight1 = new THREE.DirectionalLight(0xffffff, 1.6);
+        trackLight1.position.set(200, 350, 200);
+        trackLight1.castShadow = true;
+        trackLight1.shadow.mapSize.width = 2048;
+        trackLight1.shadow.mapSize.height = 2048;
+        trackLight1.shadow.camera.near = 10;
+        trackLight1.shadow.camera.far = 1200;
+        const d = 300;
+        trackLight1.shadow.camera.left = -d;
+        trackLight1.shadow.camera.right = d;
+        trackLight1.shadow.camera.top = d;
+        trackLight1.shadow.camera.bottom = -d;
+        scene.add(trackLight1);
+
+        const trackLight2 = new THREE.DirectionalLight(0x38bdf8, 0.9);
+        trackLight2.position.set(-250, 280, -250);
+        scene.add(trackLight2);
 
         // Kamera & Controls
-        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1500);
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3500);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Jangan tembus ke bawah tanah
+        controls.maxPolarAngle = Math.PI / 2 - 0.01;
+        camera.position.set(420, 80, 130);
+        controls.target.set(420, 48.6, 60);
 
         // ========================================================
-        // 1. GENERATE SIRKUIT BALAP F1 (GRAND PRIX LAYOUT)
+        // 1. JALUR SIRKUIT BALAP F1 MARINA BAY STREET CIRCUIT
         // ========================================================
-        // Jalur Sirkuit: Trek lurus utama, chicane tikungan 1-2, kurva sweeping, hairpin, dan trek lurus belakang
-        const trackCurve = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(0, 0, 140),     // Start / Finish Line
-            new THREE.Vector3(0, 0, 60),      // Main Straight
-            new THREE.Vector3(15, 0, -10),    // Turn 1 Entry
-            new THREE.Vector3(-25, 0, -45),   // Chicane Turn 2
-            new THREE.Vector3(-40, 0, -120),  // Turn 3 Sweeper
-            new THREE.Vector3(20, 0, -160),   // High Speed Curve
-            new THREE.Vector3(90, 0, -130),   // Parabolica
-            new THREE.Vector3(120, 0, -30),   // Back Straight
-            new THREE.Vector3(80, 0, 40),     // Hairpin Entry
-            new THREE.Vector3(45, 0, 75),     // Hairpin Apex
-            new THREE.Vector3(25, 0, 120),    // Final Corner
-        ], true); // Closed circuit loop
-
-        const TRACK_WIDTH = 12.0;
-        const KERB_WIDTH = 1.4;
-        const NUM_SEGMENTS = 400;
-
-        // Bikin Geometri Aspal dan Kerb dari Curve
-        function buildTrackRibbon() {
-            const points = trackCurve.getSpacedPoints(NUM_SEGMENTS);
-            const roadGeo = new THREE.BufferGeometry();
-            const kerbGeoL = new THREE.BufferGeometry();
-            const kerbGeoR = new THREE.BufferGeometry();
-
-            const roadVerts = [];
-            const roadUvs = [];
-            const roadIndices = [];
-
-            const kerbVertsL = [];
-            const kerbUvsL = [];
-            const kerbIndicesL = [];
-
-            const kerbVertsR = [];
-            const kerbUvsR = [];
-            const kerbIndicesR = [];
-
-            const up = new THREE.Vector3(0, 1, 0);
-
-            for (let i = 0; i <= NUM_SEGMENTS; i++) {
-                const t = i / NUM_SEGMENTS;
-                const pt = trackCurve.getPointAt(t);
-                const tangent = trackCurve.getTangentAt(t).normalize();
-                const normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
-
-                // Road Left & Right
-                const pL = pt.clone().addScaledVector(normal, TRACK_WIDTH * 0.5);
-                const pR = pt.clone().addScaledVector(normal, -TRACK_WIDTH * 0.5);
-
-                // Kerb Edges
-                const pKL = pL.clone().addScaledVector(normal, KERB_WIDTH);
-                const pKR = pR.clone().addScaledVector(normal, -KERB_WIDTH);
-
-                // Sedikit elevasi di atas tanah
-                pL.y = 0.05;
-                pR.y = 0.05;
-                pKL.y = 0.08;
-                pKR.y = 0.08;
-
-                // Vertices Aspal
-                roadVerts.push(pL.x, pL.y, pL.z);
-                roadVerts.push(pR.x, pR.y, pR.z);
-                roadUvs.push(0, t * 40);
-                roadUvs.push(1, t * 40);
-
-                // Vertices Kerb Kiri (Merah-Putih)
-                kerbVertsL.push(pKL.x, pKL.y, pKL.z);
-                kerbVertsL.push(pL.x, pL.y, pL.z);
-                kerbUvsL.push(0, t * 120);
-                kerbUvsL.push(1, t * 120);
-
-                // Vertices Kerb Kanan (Merah-Putih)
-                kerbVertsR.push(pR.x, pR.y, pR.z);
-                kerbVertsR.push(pKR.x, pKR.y, pKR.z);
-                kerbUvsR.push(0, t * 120);
-                kerbUvsR.push(1, t * 120);
-
-                if (i < NUM_SEGMENTS) {
-                    const row = i * 2;
-                    roadIndices.push(row, row + 1, row + 2);
-                    roadIndices.push(row + 1, row + 3, row + 2);
-
-                    kerbIndicesL.push(row, row + 1, row + 2);
-                    kerbIndicesL.push(row + 1, row + 3, row + 2);
-
-                    kerbIndicesR.push(row, row + 1, row + 2);
-                    kerbIndicesR.push(row + 1, row + 3, row + 2);
-                }
-            }
-
-            roadGeo.setAttribute('position', new THREE.Float32BufferAttribute(roadVerts, 3));
-            roadGeo.setAttribute('uv', new THREE.Float32BufferAttribute(roadUvs, 2));
-            roadGeo.setIndex(roadIndices);
-            roadGeo.computeVertexNormals();
-
-            kerbGeoL.setAttribute('position', new THREE.Float32BufferAttribute(kerbVertsL, 3));
-            kerbGeoL.setAttribute('uv', new THREE.Float32BufferAttribute(kerbUvsL, 2));
-            kerbGeoL.setIndex(kerbIndicesL);
-            kerbGeoL.computeVertexNormals();
-
-            kerbGeoR.setAttribute('position', new THREE.Float32BufferAttribute(kerbVertsR, 3));
-            kerbGeoR.setAttribute('uv', new THREE.Float32BufferAttribute(kerbUvsR, 2));
-            kerbGeoR.setIndex(kerbIndicesR);
-            kerbGeoR.computeVertexNormals();
-
-            // Material Aspal Balap
-            const roadMat = new THREE.MeshStandardMaterial({
-                color: 0x181a20,
-                roughness: 0.85,
-                metalness: 0.1
-            });
-
-            // Material Kerb Merah Putih
-            const canvasKerb = document.createElement('canvas');
-            canvasKerb.width = 64;
-            canvasKerb.height = 64;
-            const ctxK = canvasKerb.getContext('2d');
-            ctxK.fillStyle = '#e10600';
-            ctxK.fillRect(0, 0, 64, 32);
-            ctxK.fillStyle = '#f8fafc';
-            ctxK.fillRect(0, 32, 64, 32);
-            const kerbTexture = new THREE.CanvasTexture(canvasKerb);
-            kerbTexture.wrapS = THREE.RepeatWrapping;
-            kerbTexture.wrapT = THREE.RepeatWrapping;
-            kerbTexture.repeat.set(1, 60);
-
-            const kerbMat = new THREE.MeshStandardMaterial({
-                map: kerbTexture,
-                roughness: 0.6
-            });
-
-            const roadMesh = new THREE.Mesh(roadGeo, roadMat);
-            roadMesh.receiveShadow = true;
-            scene.add(roadMesh);
-
-            const kerbMeshL = new THREE.Mesh(kerbGeoL, kerbMat);
-            const kerbMeshR = new THREE.Mesh(kerbGeoR, kerbMat);
-            scene.add(kerbMeshL);
-            scene.add(kerbMeshR);
-
-            // Garis Finish Kotak-Kotak (Checkered Finish Line)
-            const finishLineGeo = new THREE.PlaneGeometry(TRACK_WIDTH, 2.5);
-            const canvasFin = document.createElement('canvas');
-            canvasFin.width = 128;
-            canvasFin.height = 32;
-            const ctxFin = canvasFin.getContext('2d');
-            for (let x = 0; x < 16; x++) {
-                for (let y = 0; y < 4; y++) {
-                    ctxFin.fillStyle = (x + y) % 2 === 0 ? '#fff' : '#000';
-                    ctxFin.fillRect(x * 8, y * 8, 8, 8);
-                }
-            }
-            const finTex = new THREE.CanvasTexture(canvasFin);
-            const finMat = new THREE.MeshBasicMaterial({ map: finTex, side: THREE.DoubleSide });
-            const finishMesh = new THREE.Mesh(finishLineGeo, finMat);
-            finishMesh.rotation.x = -Math.PI / 2;
-            finishMesh.position.set(0, 0.08, 140);
-            scene.add(finishMesh);
-
-            // Gantry Start/Finish (Arch Gapura Rolex/F1)
-            const gantryGeo = new THREE.BoxGeometry(TRACK_WIDTH + 6, 1.2, 2.5);
-            const gantryMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
-            const gantry = new THREE.Mesh(gantryGeo, gantryMat);
-            gantry.position.set(0, 6.5, 140);
-            scene.add(gantry);
-
-            const pillarGeo = new THREE.CylinderGeometry(0.5, 0.5, 7, 16);
-            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 });
-            const p1 = new THREE.Mesh(pillarGeo, pillarMat);
-            p1.position.set(-(TRACK_WIDTH / 2 + 2.5), 3.5, 140);
-            const p2 = new THREE.Mesh(pillarGeo, pillarMat);
-            p2.position.set(TRACK_WIDTH / 2 + 2.5, 3.5, 140);
-            scene.add(p1);
-            scene.add(p2);
-        }
-
-        // Tanah Lapangan Rumput & Bukit Sirkuit
-        function buildEnvironment() {
-            const groundGeo = new THREE.PlaneGeometry(800, 800, 32, 32);
-            const groundMat = new THREE.MeshStandardMaterial({
-                color: 0x142018, // Hijau rumput gelap sirkuit
-                roughness: 0.95
-            });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            ground.position.y = 0;
-            ground.receiveShadow = true;
-            scene.add(ground);
-
-            // Barrier / Dinding Pengaman di Seputar Trek
-            const barrierGeo = new THREE.BoxGeometry(8, 1.6, 1.5);
-            const barrierMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-            for (let i = 0; i < 50; i++) {
-                const t = i / 50;
-                const pt = trackCurve.getPointAt(t);
-                const tangent = trackCurve.getTangentAt(t).normalize();
-                const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
-                
-                const bL = new THREE.Mesh(barrierGeo, barrierMat);
-                bL.position.copy(pt).addScaledVector(normal, TRACK_WIDTH * 0.5 + 4.5);
-                bL.position.y = 0.8;
-                bL.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
-                scene.add(bL);
-            }
-        }
-
-        buildTrackRibbon();
-        buildEnvironment();
+        // Koordinat lintasan presisi menyusuri jalanan kota Marina Bay Singapore
+        const trackPoints = [
+            new THREE.Vector3(420, 48.6, 60),    // Start / Finish Line (Pit Straight)
+            new THREE.Vector3(430, 48.6, 180),   // Pit Straight exit towards Turn 1
+            new THREE.Vector3(410, 48.6, 270),   // Turn 1 Entry
+            new THREE.Vector3(330, 48.6, 320),   // Turn 2 Apex
+            new THREE.Vector3(240, 48.6, 310),   // Turn 3 Exit
+            new THREE.Vector3(160, 48.6, 380),   // Republic Boulevard
+            new THREE.Vector3(40, 48.6, 490),    // Turn 5 Apex
+            new THREE.Vector3(-120, 48.6, 480),  // Raffles Boulevard High Speed Straight
+            new THREE.Vector3(-280, 48.6, 410),  // Raffles Boulevard DRS Zone
+            new THREE.Vector3(-420, 48.6, 340),  // Turn 7 (Memorial Corner)
+            new THREE.Vector3(-460, 48.6, 260),  // Turn 8 (Stamford Road)
+            new THREE.Vector3(-400, 48.6, 180),  // Turn 9
+            new THREE.Vector3(-320, 48.6, 80),   // St Andrew's Road (Padang)
+            new THREE.Vector3(-240, 48.6, -20),  // Turn 11 (Anderson Bridge Entry)
+            new THREE.Vector3(-160, 48.6, -70),  // Anderson Bridge crossing
+            new THREE.Vector3(-110, 48.6, -75),  // Turn 13 (Fullerton Hairpin)
+            new THREE.Vector3(-70, 48.6, 40),    // Esplanade Drive Bridge
+            new THREE.Vector3(-30, 48.6, 150),   // Turn 14 Entry (The Float)
+            new THREE.Vector3(60, 48.6, 130),    // Raffles Avenue Waterfront
+            new THREE.Vector3(180, 48.6, 105),   // Marina Bay Waterfront Straight
+            new THREE.Vector3(280, 48.6, 80),    // Floating Stadium Chicane
+            new THREE.Vector3(345, 48.6, 30),    // Turn 20-21 Grandstand Exit
+            new THREE.Vector3(390, 48.6, -10)    // Turn 22-23 (Final Sweeper back to Grid)
+        ];
+        const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.2);
 
         // ========================================================
-        // 2. LOAD MODEL 3D MOBIL F1 & SIMULASI BALAPAN
+        // 2. LOAD MODEL 3D MARINA BAY STREET CIRCUIT & MOBIL F1
         // ========================================================
+        let circuitModel = null;
         let carModel = null;
+        let circuitLoaded = false;
+        let carLoaded = false;
+
         const loader = new THREE.GLTFLoader();
 
         // Dukungan Draco Mesh Compression untuk GLB
@@ -687,6 +519,43 @@
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
         loader.setDRACOLoader(dracoLoader);
 
+        function checkLoadComplete() {
+            if (circuitLoaded && carLoaded) {
+                const loaderEl = document.getElementById('circuit-loader');
+                loaderEl.classList.add('fade-out');
+                setTimeout(() => loaderEl.style.display = 'none', 500);
+
+                if (soundEnabled) {
+                    playBgmTheme();
+                    playCarEngineAudio();
+                }
+            }
+        }
+
+        // 1. Memuat Model 3D Sirkuit Marina Bay Street Circuit (Kompresi Draco Ringan ~11.7MB)
+        loader.load('./marina_bay_street_circuit.glb', (gltf) => {
+            circuitModel = gltf.scene;
+            circuitModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.receiveShadow = true;
+                }
+            });
+            scene.add(circuitModel);
+            circuitLoaded = true;
+            document.getElementById('loader-status').innerText = `Memuat Mobil: ${carData.name}...`;
+            checkLoadComplete();
+        }, (xhr) => {
+            if (xhr.lengthComputable && !circuitLoaded) {
+                const p = Math.round((xhr.loaded / xhr.total) * 100);
+                document.getElementById('loader-status').innerText = `Memuat Sirkuit Marina Bay... ${p}%`;
+            }
+        }, (err) => {
+            console.warn('Gagal memuat sirkuit Marina Bay:', err);
+            circuitLoaded = true;
+            checkLoadComplete();
+        });
+
+        // Fallback mobil balap prosedural
         function createFallbackCar(colorHex) {
             const group = new THREE.Group();
             const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.8, roughness: 0.2 });
@@ -730,8 +599,7 @@
             return group;
         }
 
-        document.getElementById('loader-status').innerText = `Mengunduh 3D Model: ${carData.name}...`;
-
+        // 2. Memuat Model 3D Mobil Formula 1
         loader.load(carData.src, (gltf) => {
             carModel = gltf.scene;
 
@@ -751,41 +619,26 @@
             });
 
             scene.add(carModel);
-
-            // Sembunyikan layar pemuatan
-            const loaderEl = document.getElementById('circuit-loader');
-            loaderEl.classList.add('fade-out');
-            setTimeout(() => loaderEl.style.display = 'none', 500);
-
-            // Mulai musik tema & suara mesin asli jika suara aktif
-            if (soundEnabled) {
-                playBgmTheme();
-                playCarEngineAudio();
-            }
+            carLoaded = true;
+            checkLoadComplete();
         }, (xhr) => {
-            if (xhr.lengthComputable) {
+            if (xhr.lengthComputable && circuitLoaded && !carLoaded) {
                 const p = Math.round((xhr.loaded / xhr.total) * 100);
-                document.getElementById('loader-status').innerText = `Memuat ${carData.name}... ${p}%`;
+                document.getElementById('loader-status').innerText = `Memuat Mobil: ${carData.name}... ${p}%`;
             }
         }, (err) => {
-            console.warn('Gagal memuat GLTF utama, mengaktifkan mobil cadangan:', err);
-            document.getElementById('loader-status').innerText = 'Menggunakan model mobil cadangan...';
+            console.warn('Gagal memuat mobil utama, menggunakan mobil cadangan:', err);
             carModel = createFallbackCar(carData.color || 0xe10600);
             scene.add(carModel);
-            const loaderEl = document.getElementById('circuit-loader');
-            loaderEl.classList.add('fade-out');
-            setTimeout(() => loaderEl.style.display = 'none', 500);
-            if (soundEnabled) {
-                playBgmTheme();
-                playCarEngineAudio();
-            }
+            carLoaded = true;
+            checkLoadComplete();
         });
 
         // ========================================================
         // 3. TELEMETRY, PHYSICS & DRIVE LOOP
         // ========================================================
         let trackProgress = 0.0;
-        let baseSpeed = 0.00075;
+        let baseSpeed = 0.00035;
         let currentSpeedKmh = 0;
         let drsActive = false;
         let currentLap = 1;
@@ -913,13 +766,15 @@
             const delta = clock.getDelta();
 
             if (carModel) {
-                // Kecepatan adaptif (Kencang di trek lurus, melambat di tikungan)
+                // Kecepatan adaptif (Kencang di trek lurus Raffles Boulevard & Waterfront, melambat di tikungan)
                 let speedFactor = 1.0;
-                // Tikungan chicane & hairpin
-                if ((trackProgress > 0.18 && trackProgress < 0.42) || (trackProgress > 0.65 && trackProgress < 0.85)) {
-                    speedFactor = 0.58; // Pengereman tikungan
+                // Tikungan chicane Sheares (0.08 - 0.22) & Anderson Bridge / Fullerton hairpin (0.56 - 0.72)
+                if ((trackProgress > 0.08 && trackProgress < 0.22) || (trackProgress > 0.56 && trackProgress < 0.72)) {
+                    speedFactor = 0.62; // Pengereman tikungan
+                } else if ((trackProgress > 0.26 && trackProgress < 0.44) || (trackProgress > 0.76 && trackProgress < 0.94)) {
+                    speedFactor = 1.35; // Akselerasi trek lurus Raffles Blvd & Waterfront
                 } else {
-                    speedFactor = 1.25; // Akselerasi trek lurus
+                    speedFactor = 1.0;
                 }
 
                 if (drsActive) speedFactor *= 1.45; // Boost DRS
@@ -989,8 +844,8 @@
                     camera.position.copy(currentPos).add(cameraOffset);
                     camera.lookAt(currentPos.clone().add(new THREE.Vector3(0, 1.4, 0)));
                 } else if (currentCamMode === 'drone') {
-                    // Kamera helikopter dari atas
-                    const cameraOffset = tangent.clone().multiplyScalar(-22).add(new THREE.Vector3(0, 26, 0));
+                    // Kamera helikopter dari atas menyusuri gedung kota Singapura
+                    const cameraOffset = tangent.clone().multiplyScalar(-26).add(new THREE.Vector3(0, 32, 0));
                     camera.position.copy(currentPos).add(cameraOffset);
                     camera.lookAt(currentPos);
                 } else if (currentCamMode === 'cockpit') {
