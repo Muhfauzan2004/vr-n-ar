@@ -1,13 +1,11 @@
 // Service Worker: Caching Aset 3D & Audio agar WebAR Super Ringan & Bisa Offline
-const CACHE_NAME = 'webar-racing-v3';
+const CACHE_NAME = 'webar-racing-v4';
 
 const PRECACHE_ASSETS = [
   './index.html',
   './sirkuit.html',
   './lembar_ar.html',
-  './manifest.json',
-  './f1_drive_in.wav',
-  './f1_drive_out.wav'
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {

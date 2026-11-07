@@ -547,8 +547,6 @@
     </div>
 
     <!-- Formula 1 Audio Effects (Preloaded) -->
-    <audio id="snd-f1-in" src="./f1_drive_in.wav" preload="auto"></audio>
-    <audio id="snd-f1-out" src="./f1_drive_out.wav" preload="auto"></audio>
     <audio id="snd-f1-theme" src="./f1_theme.m4a" loop preload="auto"></audio>
     <!-- Audio Mesin Asli Khusus Masing-masing Mobil F1 -->
     <audio id="snd-car-engine" loop preload="auto"></audio>
@@ -679,7 +677,7 @@
                 cat: 'Ducati Lenovo • MotoGP',
                 color: '#f59e0b',
                 src: './ducati_desmo.glb',
-                sound: './f1_drive_in.wav'
+                sound: null
             }
         };
 
@@ -826,12 +824,8 @@
                 }
 
                 // Pre-warm audio elements agar instan saat dimainkan
-                const inEl = document.getElementById('snd-f1-in');
-                const outEl = document.getElementById('snd-f1-out');
                 const themeEl = document.getElementById('snd-f1-theme');
                 const engEl = document.getElementById('snd-car-engine');
-                if (inEl && inEl.paused) { inEl.load(); }
-                if (outEl && outEl.paused) { outEl.load(); }
                 if (themeEl && themeEl.paused) { themeEl.load(); }
                 if (engEl && engEl.paused) { engEl.load(); }
 
@@ -985,7 +979,7 @@
             }, 30);
         }
 
-        // Sistem Suara Formula 1 (Kombinasi File Audio + Web Audio Synthesizer Otomatis)
+        // Mengatur Suara Mobil Formula 1 Saat Model Masuk / Keluar
         function playF1EngineSound(type = 'in', vehicleKey = null) {
             if (!soundEnabled) return;
             unlockAudio();
@@ -997,28 +991,7 @@
                 stopCarEngineSound(true);
             }
 
-            // 1. Coba putar file audio pre-rendered untuk kualitas maksimal
-            let audioPlayed = false;
-            try {
-                const audioEl = document.getElementById(type === 'in' ? 'snd-f1-in' : 'snd-f1-out');
-                if (audioEl) {
-                    audioEl.currentTime = 0;
-                    const p = audioEl.play();
-                    if (p !== undefined) {
-                        p.then(() => {
-                            audioPlayed = true;
-                        }).catch(() => {
-                            // Jika browser memblokir HTML5 audio, gunakan synthesizer Web Audio
-                            synthF1Sound(type);
-                        });
-                    }
-                }
-            } catch (e) {}
-
-            // 2. Synthesize Web Audio API untuk hentakan suara instan 0ms
-            synthF1Sound(type);
-
-            // 3. Haptic Feedback / Getaran Ponsel
+            // Haptic Feedback / Getaran Ponsel
             if (navigator.vibrate) {
                 try {
                     if (type === 'in') {
@@ -1028,150 +1001,6 @@
                     }
                 } catch (e) {}
             }
-        }
-
-        // Synthesizer Web Audio API Suara Mesin Formula 1 (Zero-Latency, 100% Offline)
-        function synthF1Sound(type = 'in') {
-            try {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-
-                const now = audioCtx.currentTime;
-                const duration = type === 'in' ? 1.5 : 1.3;
-
-                // Master Gain
-                const masterGain = audioCtx.createGain();
-                masterGain.gain.setValueAtTime(0.55, now);
-                masterGain.connect(audioCtx.destination);
-
-                // Distortion Curve (Karakter Garing Khas Knalpot F1 V10)
-                const distortion = audioCtx.createWaveShaper();
-                distortion.curve = makeDistortionCurve(22);
-                distortion.oversample = '4x';
-                distortion.connect(masterGain);
-
-                // Filter Knalpot Resonan (Bandpass sweep)
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.Q.setValueAtTime(2.8, now);
-                filter.frequency.setValueAtTime(type === 'in' ? 1100 : 1500, now);
-                filter.connect(distortion);
-
-                // Multi-Osilator Harmonics
-                const osc1 = audioCtx.createOscillator();
-                const osc2 = audioCtx.createOscillator();
-                const osc3 = audioCtx.createOscillator();
-                const oscSub = audioCtx.createOscillator();
-
-                osc1.type = 'sawtooth';
-                osc2.type = 'sawtooth';
-                osc3.type = 'triangle';
-                oscSub.type = 'sine';
-
-                const oscGain = audioCtx.createGain();
-                osc1.connect(oscGain);
-                osc2.connect(oscGain);
-                osc3.connect(oscGain);
-                oscGain.connect(filter);
-
-                // Sub Bass untuk getaran mesin
-                const subGain = audioCtx.createGain();
-                subGain.gain.setValueAtTime(0.3, now);
-                oscSub.connect(subGain);
-                subGain.connect(masterGain);
-
-                if (type === 'in') {
-                    // Mobil Melaju Masuk: Datang dari jauh, revving naik, gearshift pop, stabil
-                    osc1.frequency.setValueAtTime(320, now);
-                    osc1.frequency.exponentialRampToValueAtTime(1100, now + 0.55);
-                    osc1.frequency.setValueAtTime(880, now + 0.65);
-                    osc1.frequency.exponentialRampToValueAtTime(1250, now + 0.95);
-                    osc1.frequency.exponentialRampToValueAtTime(420, now + duration);
-
-                    osc2.frequency.setValueAtTime(645, now);
-                    osc2.frequency.exponentialRampToValueAtTime(2210, now + 0.55);
-                    osc2.frequency.setValueAtTime(1770, now + 0.65);
-                    osc2.frequency.exponentialRampToValueAtTime(2510, now + 0.95);
-                    osc2.frequency.exponentialRampToValueAtTime(845, now + duration);
-
-                    osc3.frequency.setValueAtTime(965, now);
-                    osc3.frequency.exponentialRampToValueAtTime(3310, now + 0.55);
-                    osc3.frequency.exponentialRampToValueAtTime(1260, now + duration);
-
-                    oscSub.frequency.setValueAtTime(160, now);
-                    oscSub.frequency.exponentialRampToValueAtTime(300, now + 0.7);
-                    oscSub.frequency.exponentialRampToValueAtTime(75, now + duration);
-
-                    oscGain.gain.setValueAtTime(0.1, now);
-                    oscGain.gain.linearRampToValueAtTime(0.65, now + 0.55);
-                    oscGain.gain.setValueAtTime(0.35, now + 0.65);
-                    oscGain.gain.linearRampToValueAtTime(0.75, now + 0.9);
-                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-                    masterGain.gain.setValueAtTime(0.3, now);
-                    masterGain.gain.linearRampToValueAtTime(0.8, now + 0.85);
-                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-                } else {
-                    // Mobil Melaju Keluar: Tancap gas pol, gearshift scream, Doppler flyby menjauh
-                    osc1.frequency.setValueAtTime(520, now);
-                    osc1.frequency.exponentialRampToValueAtTime(1400, now + 0.45);
-                    osc1.frequency.setValueAtTime(1050, now + 0.55);
-                    osc1.frequency.exponentialRampToValueAtTime(1650, now + 0.85);
-                    osc1.frequency.exponentialRampToValueAtTime(650, now + duration);
-
-                    osc2.frequency.setValueAtTime(1045, now);
-                    osc2.frequency.exponentialRampToValueAtTime(2810, now + 0.45);
-                    osc2.frequency.setValueAtTime(2110, now + 0.55);
-                    osc2.frequency.exponentialRampToValueAtTime(3310, now + 0.85);
-                    osc2.frequency.exponentialRampToValueAtTime(1310, now + duration);
-
-                    osc3.frequency.setValueAtTime(1565, now);
-                    osc3.frequency.exponentialRampToValueAtTime(4210, now + 0.45);
-                    osc3.frequency.exponentialRampToValueAtTime(1050, now + duration);
-
-                    oscSub.frequency.setValueAtTime(160, now);
-                    oscSub.frequency.exponentialRampToValueAtTime(240, now + 0.5);
-                    oscSub.frequency.exponentialRampToValueAtTime(65, now + duration);
-
-                    oscGain.gain.setValueAtTime(0.55, now);
-                    oscGain.gain.linearRampToValueAtTime(0.85, now + 0.45);
-                    oscGain.gain.setValueAtTime(0.4, now + 0.55);
-                    oscGain.gain.linearRampToValueAtTime(0.9, now + 0.8);
-                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-                    masterGain.gain.setValueAtTime(0.65, now);
-                    masterGain.gain.linearRampToValueAtTime(0.9, now + 0.5);
-                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-                }
-
-                osc1.start(now);
-                osc2.start(now);
-                osc3.start(now);
-                oscSub.start(now);
-
-                osc1.stop(now + duration);
-                osc2.stop(now + duration);
-                osc3.stop(now + duration);
-                oscSub.stop(now + duration);
-            } catch (e) {
-                console.warn('Synth F1 Audio error:', e);
-            }
-        }
-
-        function makeDistortionCurve(amount) {
-            const k = typeof amount === 'number' ? amount : 25;
-            const n_samples = 22050;
-            const curve = new Float32Array(n_samples);
-            const deg = Math.PI / 180;
-            for (let i = 0; i < n_samples; ++i) {
-                const x = (i * 2) / n_samples - 1;
-                curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
-            }
-            return curve;
         }
 
         // Memicu Efek Visual Kecepatan & Getaran Layar
