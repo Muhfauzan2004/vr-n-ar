@@ -289,6 +289,138 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* ========================================================
+           INTERACTIVE DRIVING CONTROLS (STEERING & PEDALS)
+        ======================================================== */
+        .driving-pad {
+            position: fixed;
+            bottom: 100px;
+            z-index: 30;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .driving-pad.left-pad {
+            left: 20px;
+        }
+
+        .driving-pad.right-pad {
+            right: 20px;
+        }
+
+        .drive-btn {
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid rgba(56, 189, 248, 0.35);
+            color: #f8fafc;
+            width: 66px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 800;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: all 0.1s ease;
+        }
+
+        .drive-btn .btn-icon {
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .drive-btn:active, .drive-btn.active {
+            transform: scale(0.92);
+        }
+
+        /* Steering Buttons (Cyan accent) */
+        .drive-btn.steer-btn:active, .drive-btn.steer-btn.active {
+            background: rgba(2, 132, 199, 0.85);
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.7);
+        }
+
+        /* Gas Pedal (Green accent) */
+        .drive-btn.gas-btn {
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+        .drive-btn.gas-btn:active, .drive-btn.gas-btn.active {
+            background: rgba(22, 163, 74, 0.9);
+            border-color: #22c55e;
+            box-shadow: 0 0 22px rgba(34, 197, 94, 0.8);
+        }
+
+        /* Brake Pedal (Red accent) */
+        .drive-btn.brake-btn {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .drive-btn.brake-btn:active, .drive-btn.brake-btn.active {
+            background: rgba(220, 38, 38, 0.9);
+            border-color: #ef4444;
+            box-shadow: 0 0 22px rgba(239, 68, 68, 0.8);
+        }
+
+        /* Driving Hint for Desktop Keyboard */
+        .drive-hint {
+            position: fixed;
+            bottom: 74px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 4px 14px;
+            border-radius: 15px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #94a3b8;
+            backdrop-filter: blur(8px);
+            z-index: 25;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 640px) {
+            .driving-pad {
+                bottom: 84px;
+                gap: 8px;
+            }
+            .drive-btn {
+                width: 58px;
+                height: 54px;
+                font-size: 0.6rem;
+            }
+            .driving-pad.left-pad { left: 12px; }
+            .driving-pad.right-pad { right: 12px; }
+            .drive-hint { display: none; }
+            .hud-bottom-bar {
+                padding: 10px 12px 14px 12px;
+            }
+            .speedo-card {
+                padding: 8px 12px;
+                min-width: 120px;
+            }
+            .speedo-val {
+                font-size: 1.6rem;
+            }
+            .gear-badge {
+                font-size: 1.1rem;
+                padding: 1px 8px;
+            }
+            .hud-btn {
+                padding: 8px 12px;
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
 
@@ -322,6 +454,35 @@
             <div class="badge-title" id="hud-car-name">Red Bull RB19</div>
             <div class="badge-cat" id="hud-car-cat">Barcelona-Catalunya • Spanish F1 GP</div>
         </div>
+    </div>
+
+    <!-- Interactive Driving Controls: Kemudi Belok Kiri & Kanan (Left Pad) -->
+    <div class="driving-pad left-pad" id="steering-controls">
+        <button class="drive-btn steer-btn" id="btn-steer-left" title="Belok Kiri (A / Panah Kiri)">
+            <span class="btn-icon">◀</span>
+            <span>KIRI</span>
+        </button>
+        <button class="drive-btn steer-btn" id="btn-steer-right" title="Belok Kanan (D / Panah Kanan)">
+            <span class="btn-icon">▶</span>
+            <span>KANAN</span>
+        </button>
+    </div>
+
+    <!-- Interactive Driving Controls: Pedal Gas & Rem (Right Pad) -->
+    <div class="driving-pad right-pad" id="pedal-controls">
+        <button class="drive-btn brake-btn" id="btn-brake" title="Rem (S / Panah Bawah)">
+            <span class="btn-icon">🛑</span>
+            <span>REM</span>
+        </button>
+        <button class="drive-btn gas-btn" id="btn-gas" title="Gas (W / Panah Atas)">
+            <span class="btn-icon">⚡</span>
+            <span>GAS</span>
+        </button>
+    </div>
+
+    <!-- Keyboard Driving Hint (Desktop) -->
+    <div class="drive-hint">
+        🎮 <b>Kemudi:</b> W/A/S/D atau Panah Keyboard • Spasi: DRS
     </div>
 
     <!-- Bottom Telemetry HUD -->
@@ -800,7 +961,7 @@
         });
 
         // ========================================================
-        // 3. TELEMETRY, PHYSICS & DRIVE LOOP
+        // 3. TELEMETRY, INTERACTIVE DRIVING CONTROLS & PHYSICS
         // ========================================================
         let trackProgress = 0.0;
         let baseSpeed = 0.00024;
@@ -808,6 +969,107 @@
         let drsActive = false;
         let currentLap = 1;
         let lapStartTime = performance.now();
+
+        // Status Kontrol Kemudi & Kecepatan Pengguna
+        let isSteerLeft = false;
+        let isSteerRight = false;
+        let isGas = false;
+        let isBrake = false;
+
+        let lateralOffset = 0.0;          // Offset jalur (-5.2m kiri s/d +5.2m kanan)
+        let currentLateralOffset = 0.0;   // Lerp offset aktual
+        let steeringVisualAngle = 0.0;    // Rotasi visual bodi mobil saat belok
+        let userSpeedMultiplier = 1.0;    // Multiplier akselerasi gas/rem
+        let targetUserSpeed = 1.0;
+
+        function setupDrivingControls() {
+            function bindControl(btnId, setFlag) {
+                const el = document.getElementById(btnId);
+                if (!el) return;
+
+                const start = (e) => {
+                    e.preventDefault();
+                    setFlag(true);
+                    el.classList.add('active');
+                    if (navigator.vibrate) navigator.vibrate(12);
+                    if (!audioCtx) initEngineAudio();
+                    playBgmTheme();
+                    playCarEngineAudio();
+                };
+
+                const stop = (e) => {
+                    if (e) e.preventDefault();
+                    setFlag(false);
+                    el.classList.remove('active');
+                };
+
+                el.addEventListener('touchstart', start, { passive: false });
+                el.addEventListener('touchend', stop, { passive: false });
+                el.addEventListener('touchcancel', stop, { passive: false });
+
+                el.addEventListener('mousedown', start);
+                el.addEventListener('mouseup', stop);
+                el.addEventListener('mouseleave', stop);
+            }
+
+            bindControl('btn-steer-left', (v) => isSteerLeft = v);
+            bindControl('btn-steer-right', (v) => isSteerRight = v);
+            bindControl('btn-brake', (v) => isBrake = v);
+            bindControl('btn-gas', (v) => isGas = v);
+
+            // Dukungan Keyboard Desktop (WASD & Tombol Panah)
+            window.addEventListener('keydown', (e) => {
+                if (!audioCtx) initEngineAudio();
+                playBgmTheme();
+                playCarEngineAudio();
+
+                if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+                    isSteerLeft = true;
+                    document.getElementById('btn-steer-left')?.classList.add('active');
+                }
+                if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+                    isSteerRight = true;
+                    document.getElementById('btn-steer-right')?.classList.add('active');
+                }
+                if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+                    isGas = true;
+                    document.getElementById('btn-gas')?.classList.add('active');
+                }
+                if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+                    isBrake = true;
+                    document.getElementById('btn-brake')?.classList.add('active');
+                }
+                if (e.code === 'Space') {
+                    toggleDRS();
+                }
+                if (e.code === 'KeyC') {
+                    cycleCamera();
+                }
+                if (e.code === 'KeyM') {
+                    toggleSound();
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+                    isSteerLeft = false;
+                    document.getElementById('btn-steer-left')?.classList.remove('active');
+                }
+                if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+                    isSteerRight = false;
+                    document.getElementById('btn-steer-right')?.classList.remove('active');
+                }
+                if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+                    isGas = false;
+                    document.getElementById('btn-gas')?.classList.remove('active');
+                }
+                if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+                    isBrake = false;
+                    document.getElementById('btn-brake')?.classList.remove('active');
+                }
+            });
+        }
+        setupDrivingControls();
 
         // Camera Modes: 'chase', 'drone', 'cockpit', 'orbit'
         const CAM_MODES = ['chase', 'drone', 'cockpit', 'orbit'];
@@ -931,7 +1193,7 @@
             const delta = clock.getDelta();
 
             if (carModel) {
-                // Kecepatan adaptif (Kencang di trek lurus, melambat di tikungan tajam)
+                // Kecepatan adaptif sirkuit (Kencang di trek lurus, melambat di tikungan tajam)
                 let speedFactor = 1.0;
                 // Tikungan tajam & chicane (Turn 1-2 Elf: 0.08-0.12, Stadium chicane: 0.32-0.36, Turn 10 La Caixa: 0.70-0.74, Technical S3: 0.78-0.84)
                 if ((trackProgress > 0.08 && trackProgress < 0.12) || 
@@ -947,9 +1209,36 @@
                     speedFactor = 1.05;
                 }
 
-                if (drsActive) speedFactor *= 1.45; // Boost DRS
+                // 1. Logika Kecepatan Berdasarkan Pedal Gas & Rem Pengguna
+                if (isGas) {
+                    targetUserSpeed = 1.65; // Akselerasi penuh saat tombol GAS ditekan (~320-350 km/h)
+                } else if (isBrake) {
+                    targetUserSpeed = 0.18; // Pengereman tajam saat tombol REM ditekan (~30-45 km/h)
+                } else {
+                    targetUserSpeed = 1.0;  // Kecepatan jelajah normal saat pedal dilepas (~200 km/h)
+                }
+                userSpeedMultiplier += (targetUserSpeed - userSpeedMultiplier) * 0.08;
 
-                trackProgress = (trackProgress + baseSpeed * speedFactor * (delta * 60)) % 1.0;
+                let totalSpeedFactor = speedFactor * userSpeedMultiplier;
+                if (drsActive) totalSpeedFactor *= 1.45; // Boost DRS
+
+                trackProgress = (trackProgress + baseSpeed * totalSpeedFactor * (delta * 60)) % 1.0;
+
+                // 2. Logika Kemudi Belok Kanan & Kiri (Steering)
+                const steerRate = 8.5 * delta; // Kecepatan perpindahan jalur melintang (meter/detik)
+                if (isSteerLeft) {
+                    lateralOffset = Math.max(-5.2, lateralOffset - steerRate);
+                } else if (isSteerRight) {
+                    lateralOffset = Math.min(5.2, lateralOffset + steerRate);
+                } else {
+                    // Auto-centering lembut kembali ke tengah racing line saat tombol dilepas
+                    lateralOffset += (0 - lateralOffset) * 0.04;
+                }
+
+                currentLateralOffset += (lateralOffset - currentLateralOffset) * 0.22;
+
+                const targetSteerAngle = isSteerRight ? 0.38 : (isSteerLeft ? -0.38 : 0.0);
+                steeringVisualAngle += (targetSteerAngle - steeringVisualAngle) * 0.16;
 
                 // Cek putaran Lap
                 if (trackProgress < 0.002 && performance.now() - lapStartTime > 5000) {
@@ -965,24 +1254,35 @@
                 document.getElementById('lap-time').innerText = 
                     `${String(lapSec).padStart(2, '0')}:${String(lapMs).padStart(2, '0')}`;
 
-                // Posisi & Rotasi Mobil di Sepanjang Jalur Sirkuit
+                // 3. Posisi & Rotasi Mobil di Sepanjang Jalur Sirkuit dengan Offset Kemudi
                 const currentPos = trackCurve.getPointAt(trackProgress);
-
-                carModel.position.copy(currentPos);
-                carModel.position.y += carData.yOffset;
-
-                // Lookahead ~6 meter untuk kemudi presisi dan mulus menyusuri aspal sirkuit
                 const lookAheadProgress = (trackProgress + 0.0012) % 1.0;
                 const lookAheadPos = trackCurve.getPointAt(lookAheadProgress);
                 const tangent = lookAheadPos.clone().sub(currentPos).normalize();
 
-                // Hadapkan moncong mobil persis ke arah lintasan di depannya
-                carModel.lookAt(lookAheadPos.x, currentPos.y + carData.yOffset, lookAheadPos.z);
+                // Vektor normal tegak lurus mengarah ke kanan mobil
+                const upVec = new THREE.Vector3(0, 1, 0);
+                const normalRight = tangent.clone().cross(upVec).normalize();
 
-                // Update Telemetry Speedometer
-                const targetKmh = Math.round(180 * speedFactor + (Math.sin(performance.now() * 0.005) * 6));
+                // Posisi aktual mobil setelah dibelokkan ke kiri/kanan
+                const actualCarPos = currentPos.clone().addScaledVector(normalRight, currentLateralOffset);
+                carModel.position.copy(actualCarPos);
+                carModel.position.y += carData.yOffset;
+
+                // Arah hadap moncong mobil menyusuri jalur belokan
+                const actualLookAheadPos = lookAheadPos.clone().addScaledVector(normalRight, currentLateralOffset);
+                carModel.lookAt(actualLookAheadPos.x, actualCarPos.y, actualLookAheadPos.z);
+
+                // Animasi visual moncong menoleh (yaw) & suspensi miring (body roll) saat belok
+                if (Math.abs(steeringVisualAngle) > 0.005) {
+                    carModel.rotateY(-steeringVisualAngle * 0.35);
+                    carModel.rotateZ(-steeringVisualAngle * 0.10);
+                }
+
+                // Update Telemetry Speedometer aktual
+                const targetKmh = Math.round(180 * totalSpeedFactor + (Math.sin(performance.now() * 0.005) * 6));
                 currentSpeedKmh += (targetKmh - currentSpeedKmh) * 0.12;
-                document.getElementById('speedo-number').innerText = Math.round(currentSpeedKmh);
+                document.getElementById('speedo-number').innerText = Math.max(0, Math.round(currentSpeedKmh));
 
                 // Gear indicator (1 - 8)
                 const gear = Math.min(8, Math.max(1, Math.floor(currentSpeedKmh / 42) + 1));
@@ -1012,22 +1312,22 @@
                 // 4. SISTEM KAMERA INTERAKTIF (CHASE / DRONE / COCKPIT)
                 // ========================================================
                 if (currentCamMode === 'chase') {
-                    // Kamera mengejar di belakang mobil
+                    // Kamera mengejar di belakang mobil mengikuti kemudi aktual
                     const cameraOffset = tangent.clone().multiplyScalar(-14).add(new THREE.Vector3(0, 4.8, 0));
-                    camera.position.copy(currentPos).add(cameraOffset);
-                    camera.lookAt(currentPos.clone().add(new THREE.Vector3(0, 1.4, 0)));
+                    camera.position.copy(actualCarPos).add(cameraOffset);
+                    camera.lookAt(actualCarPos.clone().add(new THREE.Vector3(0, 1.4, 0)));
                 } else if (currentCamMode === 'drone') {
-                    // Kamera helikopter dari atas menyusuri gedung kota Singapura
+                    // Kamera helikopter dari atas menyusuri sirkuit
                     const cameraOffset = tangent.clone().multiplyScalar(-26).add(new THREE.Vector3(0, 32, 0));
-                    camera.position.copy(currentPos).add(cameraOffset);
-                    camera.lookAt(currentPos);
+                    camera.position.copy(actualCarPos).add(cameraOffset);
+                    camera.lookAt(actualCarPos);
                 } else if (currentCamMode === 'cockpit') {
                     // Kamera tepat di atas kokpit helm pembalap
                     const cameraOffset = tangent.clone().multiplyScalar(0.4).add(new THREE.Vector3(0, 1.25, 0));
-                    camera.position.copy(currentPos).add(cameraOffset);
-                    camera.lookAt(currentPos.clone().add(tangent.clone().multiplyScalar(20)));
+                    camera.position.copy(actualCarPos).add(cameraOffset);
+                    camera.lookAt(actualCarPos.clone().add(tangent.clone().multiplyScalar(20)));
                 } else if (currentCamMode === 'orbit') {
-                    controls.target.copy(currentPos);
+                    controls.target.copy(actualCarPos);
                     controls.update();
                 }
             }
