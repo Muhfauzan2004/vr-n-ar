@@ -667,7 +667,7 @@
         const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'centripetal');
 
         // ========================================================
-        // 2. LOAD MODEL 3D MARINA BAY STREET CIRCUIT & MOBIL F1
+        // 2. LOAD MODEL 3D CIRCUIT DE BARCELONA-CATALUNYA & MOBIL F1
         // ========================================================
         let circuitModel = null;
         let carModel = null;
@@ -694,9 +694,12 @@
             }
         }
 
-        // 1. Memuat Model 3D Sirkuit Marina Bay Street Circuit (Kompresi Draco Ringan ~11.7MB)
+        // 1. Memuat Model 3D Circuit de Barcelona-Catalunya (Skala Penuh 1:1 Nyata ~51.4MB)
         loader.load('./circuit_de_catalunya.glb', (gltf) => {
             circuitModel = gltf.scene;
+            // Skala 100x untuk menyesuaikan koordinat asli FBX Sketchfab ke skala meter dunia nyata
+            circuitModel.scale.set(100, 100, 100);
+            circuitModel.updateMatrixWorld(true);
             circuitModel.traverse((child) => {
                 if (child.isMesh) {
                     child.receiveShadow = true;
