@@ -72,68 +72,6 @@
         }
 
         
-        /* Circuit Switcher Dropdown */
-        .circuit-switcher-dropdown {
-            position: relative;
-        }
-
-        .circuit-btn {
-            background: rgba(15, 23, 42, 0.92);
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            color: #fff;
-            padding: 8px 14px;
-            border-radius: 25px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            backdrop-filter: blur(12px);
-            transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        }
-
-        .circuit-btn:active {
-            transform: scale(0.95);
-        }
-
-        .circuit-menu {
-            position: absolute;
-            top: 45px;
-            left: 0;
-            background: rgba(15, 23, 42, 0.96);
-            border: 1px solid rgba(56, 189, 248, 0.35);
-            border-radius: 16px;
-            padding: 6px;
-            min-width: 250px;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(16px);
-            z-index: 50;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .circuit-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .circuit-item:hover, .circuit-item:active {
-            background: rgba(56, 189, 248, 0.15);
-        }
-
-        .circuit-item.selected {
-            background: rgba(56, 189, 248, 0.25);
-            border: 1px solid rgba(56, 189, 248, 0.5);
-        }
-
         .nav-back-btn {
             background: rgba(15, 23, 42, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -503,9 +441,9 @@
         </div>
     </div>
 
-    <!-- Lap Timer HUD -->
+    <!-- Lap Timer & Sector HUD -->
     <div class="lap-badge">
-        ⏱️ LAP <span id="lap-counter" style="color: #38bdf8;">1</span> • <span id="lap-time" style="color: #22c55e;">00:00.00</span>
+        ⏱️ LAP <span id="lap-counter" style="color: #38bdf8;">1</span> • <span id="lap-time" style="color: #22c55e;">00:00.00</span> • <span id="sector-indicator" style="color: #c084fc; font-weight: 800;">S1 (Turns 1-4)</span>
     </div>
 
     <!-- Top Navigation HUD -->
@@ -514,34 +452,16 @@
             <a href="./index.html" class="nav-back-btn" id="btn-back">
                 📷 Kembali ke AR
             </a>
-            <!-- Circuit Switcher Button & Dropdown -->
-            <div class="circuit-switcher-dropdown">
-                <button class="circuit-btn" onclick="toggleCircuitDropdown(event)" id="circuit-btn">
-                    <span id="circuit-flag">🇪🇸</span>
-                    <span id="circuit-name">Catalunya</span>
-                    <span style="font-size: 0.65rem; opacity: 0.7;">▼</span>
-                </button>
-                <div class="circuit-menu" id="circuit-menu" style="display: none;">
-                    <div class="circuit-item" id="item-catalunya" onclick="switchCircuit('catalunya')">
-                        <span style="font-size: 1.25rem;">🇪🇸</span>
-                        <div>
-                            <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Barcelona-Catalunya</div>
-                            <div style="font-size: 0.7rem; color: #38bdf8;">Spanish GP • Day Race • 14 Turns</div>
-                        </div>
-                    </div>
-                    <div class="circuit-item" id="item-marinabay" onclick="switchCircuit('marinabay')">
-                        <span style="font-size: 1.25rem;">🇸🇬</span>
-                        <div>
-                            <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Marina Bay Circuit</div>
-                            <div style="font-size: 0.7rem; color: #facc15;">Singapore GP • Night Race • 19 Turns</div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Catalunya Circuit Badge -->
+            <div style="display: flex; align-items: center; gap: 7px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid rgba(56, 189, 248, 0.45); padding: 7px 14px; border-radius: 20px; color: #fff; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);">
+                <span style="font-size: 1.1rem;">🇪🇸</span>
+                <span style="font-family: 'Orbitron', sans-serif; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.5px;">Barcelona-Catalunya</span>
+                <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 7px; border-radius: 6px; font-size: 0.65rem; font-weight: 700;">14 TURNS</span>
             </div>
         </div>
         <div class="car-badge" id="hud-car-badge">
             <div class="badge-title" id="hud-car-name">Red Bull RB19</div>
-            <div class="badge-cat" id="hud-car-cat">Barcelona-Catalunya • Spanish F1 GP</div>
+            <div class="badge-cat" id="hud-car-cat">Spanish F1 GP • 4.675 KM</div>
         </div>
     </div>
 
@@ -676,33 +596,32 @@
 
         
         // ========================================================
-        // DATA SIRKUIT F1: CATALUNYA & MARINA BAY
+        // DATA SIRKUIT F1: CIRCUIT DE BARCELONA-CATALUNYA
         // ========================================================
-        const CIRCUITS = {
-            'catalunya': {
-                id: 'catalunya',
-                shortName: 'Catalunya',
-                name: 'Barcelona-Catalunya',
-                title: 'Circuit de Barcelona-Catalunya',
-                event: 'Barcelona-Catalunya • Spanish F1 GP',
-                flag: '🇪🇸',
-                file: './circuit_de_catalunya.glb',
-                scale: 100,
-                isNight: false,
-                skyColor: 0x93c5fd,
-                fogColor: 0x93c5fd,
-                fogDensity: 0.00035,
-                cameraInit: { pos: [185, 12, 181.8], target: [148, 6, 181.8] },
-                ambientColor: 0xffffff,
-                ambientIntensity: 0.95,
-                hemiIntensity: 0.75,
-                sunColor: 0xfffaf0,
-                sunIntensity: 1.6,
-                sunPos: [300, 500, 250],
-                fillColor: 0x93c5fd,
-                fillIntensity: 0.5,
-                fillPos: [-300, 300, -250],
-                exposure: 1.10,
+        const circuitData = {
+            id: 'catalunya',
+            shortName: 'Catalunya',
+            name: 'Circuit de Barcelona-Catalunya',
+            title: 'Circuit de Barcelona-Catalunya',
+            event: 'Barcelona-Catalunya • Spanish F1 GP',
+            flag: '🇪🇸',
+            file: './circuit_de_catalunya.glb',
+            scale: 100,
+            isNight: false,
+            skyColor: 0x7dd3fc,
+            fogColor: 0xb0d8eb,
+            fogDensity: 0.00025,
+            cameraInit: { pos: [185, 12, 181.8], target: [148, 6, 181.8] },
+            ambientColor: 0xffffff,
+            ambientIntensity: 0.92,
+            hemiIntensity: 0.72,
+            sunColor: 0xfffbeb,
+            sunIntensity: 1.70,
+            sunPos: [350, 550, 250],
+            fillColor: 0xdbeafe,
+            fillIntensity: 0.50,
+            fillPos: [-300, 300, -250],
+            exposure: 1.12,
                 points: [
         new THREE.Vector3(148.86, 5.86, 181.80),
     new THREE.Vector3(123.65, 5.85, 181.80),
@@ -915,229 +834,7 @@
                     }
                     return new THREE.Color(0x22c55e); // Hijau akselerasi
                 }
-            },
-            'marinabay': {
-                id: 'marinabay',
-                shortName: 'Marina Bay',
-                name: 'Marina Bay Street Circuit',
-                title: 'Marina Bay Street Circuit',
-                event: 'Marina Bay • Singapore F1 Night GP',
-                flag: '🇸🇬',
-                file: './marina_bay_street_circuit.glb',
-                scale: 1,
-                isNight: true,
-                skyColor: 0x060913,
-                fogColor: 0x0a101d,
-                fogDensity: 0.00045,
-                cameraInit: { pos: [490, 58, 100], target: [479.8, 48.2, 76.5] },
-                ambientColor: 0x475569, // Ambient malam sejuk
-                ambientIntensity: 0.35,
-                hemiIntensity: 0.20,
-                sunColor: 0xffffff, // Lampu sorot LED F1 malam yang tajam & jernih
-                sunIntensity: 1.25,
-                sunPos: [500, 350, 150],
-                fillColor: 0x38bdf8,
-                fillIntensity: 0.22,
-                fillPos: [-200, 250, -100],
-                exposure: 0.95,
-                points: [
-        new THREE.Vector3(472.0, 48.18, 76.5),
-        new THREE.Vector3(491.2, 48.33, 48.9),
-        new THREE.Vector3(500.1, 48.47, 16.7),
-        new THREE.Vector3(506.5, 48.61, -15.9),
-        new THREE.Vector3(512.2, 48.33, -50),
-        new THREE.Vector3(518, 48.33, -82.4),
-        new THREE.Vector3(523.7, 48.35, -115),
-        new THREE.Vector3(529.3, 48.33, -147.8),
-        new THREE.Vector3(535.9, 48.34, -181.2),
-        new THREE.Vector3(543.8, 48.23, -213.8),
-        new THREE.Vector3(568.2, 48.05, -236.6),
-        new THREE.Vector3(585.6, 47.89, -267),
-        new THREE.Vector3(572.2, 48.49, -299.4),
-        new THREE.Vector3(549.4, 48.5, -331),
-        new THREE.Vector3(545.2, 48.5, -307.9),
-        new THREE.Vector3(551.9, 48.43, -277.2),
-        new THREE.Vector3(572.1, 48.25, -266.2),
-        new THREE.Vector3(601.2, 47.84, -246.6),
-        new THREE.Vector3(626.8, 47.87, -223.7),
-        new THREE.Vector3(653.2, 47.86, -201.6),
-        new THREE.Vector3(680, 47.79, -179.9),
-        new THREE.Vector3(707.7, 47.18, -158),
-        new THREE.Vector3(718.1, 47, -127.3),
-        new THREE.Vector3(718.5, 46.97, -96.3),
-        new THREE.Vector3(736.9, 47.07, -70.5),
-        new THREE.Vector3(764.4, 46.78, -49.1),
-        new THREE.Vector3(792.5, 46.39, -30.7),
-        new THREE.Vector3(814.9, 46.44, -5.7),
-        new THREE.Vector3(808, 46.9, 22.4),
-        new THREE.Vector3(791.9, 46.88, 53.9),
-        new THREE.Vector3(775.1, 46.86, 83.7),
-        new THREE.Vector3(756.8, 46.82, 113.8),
-        new THREE.Vector3(740.2, 46.81, 143.4),
-        new THREE.Vector3(723.3, 46.82, 173.8),
-        new THREE.Vector3(708.8, 46.67, 204.6),
-        new THREE.Vector3(690.3, 46.45, 233.7),
-        new THREE.Vector3(673.8, 46.44, 263.4),
-        new THREE.Vector3(657.1, 46.45, 293.7),
-        new THREE.Vector3(640.9, 46.44, 323.4),
-        new THREE.Vector3(635.7, 46.51, 356.8),
-        new THREE.Vector3(626.6, 46.77, 382.5),
-        new THREE.Vector3(608.7, 46.78, 382.6),
-        new THREE.Vector3(578, 46.97, 380.8),
-        new THREE.Vector3(546.9, 47.29, 365),
-        new THREE.Vector3(521.5, 47.58, 343.1),
-        new THREE.Vector3(496.6, 47.59, 318.4),
-        new THREE.Vector3(474.8, 47.79, 292),
-        new THREE.Vector3(454.8, 47.88, 265.1),
-        new THREE.Vector3(431.5, 47.78, 244.2),
-        new THREE.Vector3(401.1, 47.49, 225),
-        new THREE.Vector3(381.9, 47.17, 206),
-        new THREE.Vector3(354.8, 46.61, 184.3),
-        new THREE.Vector3(328.4, 46.45, 163.4),
-        new THREE.Vector3(302.8, 46.53, 139.8),
-        new THREE.Vector3(276, 46.43, 117.7),
-        new THREE.Vector3(249.9, 46.44, 96.5),
-        new THREE.Vector3(220.2, 46.43, 78.8),
-        new THREE.Vector3(188.3, 46.42, 71.2),
-        new THREE.Vector3(154.8, 46.43, 70.4),
-        new THREE.Vector3(130, 46.4, 58.4),
-        new THREE.Vector3(126.1, 46.41, 24.5),
-        new THREE.Vector3(122.7, 46.23, -8.6),
-        new THREE.Vector3(96.4, 45.71, -25.7),
-        new THREE.Vector3(63.1, 45.68, -30.9),
-        new THREE.Vector3(29.5, 45.68, -33.1),
-        new THREE.Vector3(-3, 45.69, -34.8),
-        new THREE.Vector3(-36.4, 45.69, -37.6),
-        new THREE.Vector3(-70, 45.68, -42.9),
-        new THREE.Vector3(-99.8, 45.65, -37.1),
-        new THREE.Vector3(-109.9, 45.77, -6.6),
-        new THREE.Vector3(-110.8, 45.78, 28.9),
-        new THREE.Vector3(-126.7, 45.7, 45.7),
-        new THREE.Vector3(-161.6, 45.72, 49.5),
-        new THREE.Vector3(-195.1, 45.71, 49.4),
-        new THREE.Vector3(-229, 45.76, 54.2),
-        new THREE.Vector3(-254.3, 45.68, 42.4),
-        new THREE.Vector3(-266.9, 45.36, 12.3),
-        new THREE.Vector3(-278.3, 45.21, -16.7),
-        new THREE.Vector3(-305.2, 45.1, -38.1),
-        new THREE.Vector3(-338.7, 45.1, -39.3),
-        new THREE.Vector3(-373.9, 45.1, -42.5),
-        new THREE.Vector3(-406.8, 45.1, -42.8),
-        new THREE.Vector3(-439.2, 45.1, -46.4),
-        new THREE.Vector3(-473.2, 45.1, -46.7),
-        new THREE.Vector3(-506.1, 45.1, -48.6),
-        new THREE.Vector3(-538.1, 45.1, -49.4),
-        new THREE.Vector3(-572.2, 45.2, -53.6),
-        new THREE.Vector3(-598, 45.52, -44.7),
-        new THREE.Vector3(-614.2, 46.02, -17.9),
-        new THREE.Vector3(-624.8, 46.59, 11.1),
-        new THREE.Vector3(-625.1, 47.25, 43.5),
-        new THREE.Vector3(-625.8, 47.43, 77.4),
-        new THREE.Vector3(-619.6, 47.35, 109.2),
-        new THREE.Vector3(-613.8, 47.31, 142.2),
-        new THREE.Vector3(-609.7, 47.31, 174.3),
-        new THREE.Vector3(-605.4, 47.31, 206.6),
-        new THREE.Vector3(-601, 47.31, 239),
-        new THREE.Vector3(-596, 47.31, 271.8),
-        new THREE.Vector3(-591.4, 47.31, 305.2),
-        new THREE.Vector3(-587.1, 47.31, 338.3),
-        new THREE.Vector3(-582.5, 47.31, 370.7),
-        new THREE.Vector3(-576.4, 47.3, 404.8),
-        new THREE.Vector3(-569.9, 47.25, 436.4),
-        new THREE.Vector3(-568.6, 47.25, 469.4),
-        new THREE.Vector3(-564.9, 47.27, 502.2),
-        new THREE.Vector3(-563.8, 47.31, 536.7),
-        new THREE.Vector3(-559.6, 47.2, 570.2),
-        new THREE.Vector3(-534.9, 47.22, 581.5),
-        new THREE.Vector3(-504.6, 47.18, 590.6),
-        new THREE.Vector3(-479.1, 47.11, 607),
-        new THREE.Vector3(-452.5, 47.06, 631.5),
-        new THREE.Vector3(-430.9, 47.15, 635.8),
-        new THREE.Vector3(-412.9, 46.98, 612.6),
-        new THREE.Vector3(-404.2, 46.87, 578.6),
-        new THREE.Vector3(-402.1, 46.65, 545.9),
-        new THREE.Vector3(-403.7, 46.43, 512.2),
-        new THREE.Vector3(-412.6, 46.46, 480.1),
-        new THREE.Vector3(-425.5, 46.93, 448.7),
-        new THREE.Vector3(-437.3, 47.21, 417),
-        new THREE.Vector3(-446.6, 47.72, 384.7),
-        new THREE.Vector3(-454.4, 47.67, 354.4),
-        new THREE.Vector3(-460.8, 47.61, 320.9),
-        new THREE.Vector3(-467.7, 47.54, 289.2),
-        new THREE.Vector3(-471, 47.7, 254.4),
-        new THREE.Vector3(-453.8, 47.85, 242),
-        new THREE.Vector3(-422.7, 47.65, 235.1),
-        new THREE.Vector3(-389.8, 47.58, 233),
-        new THREE.Vector3(-356.1, 47.58, 236.2),
-        new THREE.Vector3(-322, 47.56, 237.6),
-        new THREE.Vector3(-288.2, 47.6, 240.5),
-        new THREE.Vector3(-255.4, 47.62, 241.2),
-        new THREE.Vector3(-222.8, 47.59, 243.1),
-        new THREE.Vector3(-188.8, 47.58, 246.1),
-        new THREE.Vector3(-157.1, 47.6, 247.5),
-        new THREE.Vector3(-124.1, 47.59, 250),
-        new THREE.Vector3(-90.3, 47.52, 251.2),
-        new THREE.Vector3(-57, 47.15, 252.6),
-        new THREE.Vector3(-24.1, 47.14, 256.1),
-        new THREE.Vector3(9, 47.15, 264.1),
-        new THREE.Vector3(41.1, 47.16, 276.9),
-        new THREE.Vector3(70.4, 47.02, 293.3),
-        new THREE.Vector3(99.5, 46.9, 310.4),
-        new THREE.Vector3(129.3, 47.15, 328.6),
-        new THREE.Vector3(159.1, 47.15, 345.9),
-        new THREE.Vector3(189.7, 47.16, 363.5),
-        new THREE.Vector3(219.4, 47.16, 380.6),
-        new THREE.Vector3(248.8, 47.45, 396.4),
-        new THREE.Vector3(277, 47.59, 417.8),
-        new THREE.Vector3(306.8, 47.82, 434.9),
-        new THREE.Vector3(330.9, 47.84, 425.4),
-        new THREE.Vector3(351, 47.86, 399.4),
-        new THREE.Vector3(369.4, 47.87, 371.8),
-        new THREE.Vector3(389.8, 47.87, 345.4),
-        new THREE.Vector3(408.1, 47.88, 315.9),
-        new THREE.Vector3(424.7, 47.89, 286.4),
-        new THREE.Vector3(424.5, 47.8, 257.8),
-        new THREE.Vector3(424.8, 47.61, 229.1),
-        new THREE.Vector3(436.0, 47.59, 201.2),
-        new THREE.Vector3(444.0, 47.62, 168.6),
-        new THREE.Vector3(451.0, 47.88, 136.4),
-        new THREE.Vector3(448.0, 47.77, 104.8)
-                ],
-                getSpeedFactor: function(t) {
-                    if ((t > 0.08 && t < 0.16) || 
-                        (t > 0.28 && t < 0.35) || 
-                        (t > 0.62 && t < 0.68) || 
-                        (t > 0.76 && t < 0.86)) {
-                        return 0.65;
-                    } else if ((t >= 0.0 && t < 0.08) || 
-                               (t > 0.18 && t < 0.26) || 
-                               (t > 0.88 && t <= 1.0)) {
-                        return 1.35;
-                    }
-                    return 1.05;
-                },
-                getLineColor: function(t) {
-                    if ((t >= 0.075 && t <= 0.095) ||
-                        (t >= 0.270 && t <= 0.290) ||
-                        (t >= 0.610 && t <= 0.630) ||
-                        (t >= 0.750 && t <= 0.770)) {
-                        return new THREE.Color(0xef4444); // Merah pengereman
-                    }
-                    if ((t > 0.095 && t < 0.160) ||
-                        (t > 0.290 && t < 0.350) ||
-                        (t > 0.630 && t < 0.680) ||
-                        (t > 0.770 && t < 0.860)) {
-                        return new THREE.Color(0xfacc15); // Kuning apex
-                    }
-                    return new THREE.Color(0x22c55e); // Hijau akselerasi
-                }
-            }
         };
-
-
-        let selectedCircuitKey = urlParams.get('circuit') || urlParams.get('sirkuit') || 'catalunya';
-        if (!CIRCUITS[selectedCircuitKey]) selectedCircuitKey = 'catalunya';
-        const circuitData = CIRCUITS[selectedCircuitKey];
 
         // Update Document Title & HUD Info
         document.title = `${circuitData.title} - 3D F1 Grand Prix`;
@@ -1145,36 +842,6 @@
         document.getElementById('hud-car-badge').style.borderColor = carData.color;
         document.getElementById('hud-car-cat').innerText = circuitData.event;
         document.getElementById('btn-back').href = `./index.html?model=${selectedCarKey}`;
-
-        document.getElementById('circuit-flag').innerText = circuitData.flag;
-        document.getElementById('circuit-name').innerText = circuitData.shortName;
-
-        const selItem = document.getElementById('item-' + selectedCircuitKey);
-        if (selItem) selItem.classList.add('selected');
-
-        // Dropdown functions
-        function toggleCircuitDropdown(e) {
-            if (e) e.stopPropagation();
-            const menu = document.getElementById('circuit-menu');
-            menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'flex' : 'none';
-        }
-
-        function switchCircuit(key) {
-            if (key === selectedCircuitKey) {
-                document.getElementById('circuit-menu').style.display = 'none';
-                return;
-            }
-            const url = new URL(window.location.href);
-            url.searchParams.set('circuit', key);
-            window.location.href = url.toString();
-        }
-
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('.circuit-switcher-dropdown')) {
-                const menu = document.getElementById('circuit-menu');
-                if (menu) menu.style.display = 'none';
-            }
-        });
 
         // Setup Three.js Scene
         const canvas = document.getElementById('webgl-canvas');
@@ -1184,21 +851,17 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = circuitData.exposure || (circuitData.isNight ? 0.95 : 1.10);
+        renderer.toneMappingExposure = circuitData.exposure || 1.12;
         renderer.outputEncoding = THREE.sRGBEncoding;
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(circuitData.skyColor);
         scene.fog = new THREE.FogExp2(circuitData.fogColor, circuitData.fogDensity);
 
-        const ambientLight = new THREE.AmbientLight(circuitData.ambientColor || 0xffffff, circuitData.ambientIntensity);
+        const ambientLight = new THREE.AmbientLight(circuitData.ambientColor, circuitData.ambientIntensity);
         scene.add(ambientLight);
 
-        const hemiLight = new THREE.HemisphereLight(
-            circuitData.isNight ? 0x38bdf8 : 0xbae6fd,
-            circuitData.isNight ? 0x0f172a : 0x475569,
-            circuitData.hemiIntensity
-        );
+        const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x475569, circuitData.hemiIntensity);
         scene.add(hemiLight);
 
         const sunLight = new THREE.DirectionalLight(circuitData.sunColor, circuitData.sunIntensity);
@@ -1213,6 +876,7 @@
         sunLight.shadow.camera.right = d;
         sunLight.shadow.camera.top = d;
         sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0001;
         scene.add(sunLight);
 
         const fillLight = new THREE.DirectionalLight(circuitData.fillColor, circuitData.fillIntensity);
@@ -1348,7 +1012,7 @@
             setTimeout(() => { if (banner) banner.style.display = 'none'; }, 9000);
         }
 
-        // 1. Memuat Model 3D Sirkuit (Dinamis: Catalunya atau Marina Bay)
+        // 1. Memuat Model 3D Sirkuit Barcelona-Catalunya
         loader.load(circuitData.file, (gltf) => {
             circuitModel = gltf.scene;
             const s = circuitData.scale;
@@ -1357,16 +1021,6 @@
             circuitModel.traverse((child) => {
                 if (child.isMesh) {
                     child.receiveShadow = true;
-                    if (circuitData.isNight && child.material) {
-                        const mats = Array.isArray(child.material) ? child.material : [child.material];
-                        mats.forEach(mat => {
-                            if (mat.color) {
-                                mat.color.multiplyScalar(0.72);
-                            }
-                            mat.roughness = Math.max(mat.roughness !== undefined ? mat.roughness : 0.6, 0.85);
-                            mat.metalness = Math.min(mat.metalness !== undefined ? mat.metalness : 0.1, 0.08);
-                        });
-                    }
                 }
             });
             scene.add(circuitModel);
@@ -1376,11 +1030,10 @@
         }, (xhr) => {
             if (xhr.lengthComputable && !circuitLoaded) {
                 const p = Math.round((xhr.loaded / xhr.total) * 100);
-                document.getElementById('loader-status').innerText = `Memuat ${circuitData.name}... ${p}%`;
+                document.getElementById('loader-status').innerText = `Memuat Sirkuit Catalunya... ${p}%`;
             }
         }, (err) => {
-            console.warn(`Gagal memuat GLB sirkuit ${circuitData.name} (mungkin offline/CORS file://), menggunakan lintasan prosedural:`, err);
-            // Tetap izinkan balapan berjalan dengan lintasan prosedural berkualitas tinggi
+            console.warn(`Gagal memuat GLB sirkuit Catalunya:`, err);
             circuitLoaded = true;
             checkLoadComplete();
         });
@@ -1575,16 +1228,29 @@
         }
         setupDrivingControls();
 
-        // Camera Modes: 'chase', 'drone', 'cockpit', 'orbit'
-        const CAM_MODES = ['chase', 'drone', 'cockpit', 'orbit'];
+        // Camera Modes: 'chase', 'tv', 'drone', 'cockpit', 'orbit'
+        const CAM_MODES = ['chase', 'tv', 'drone', 'cockpit', 'orbit'];
         let camIndex = 0;
         let currentCamMode = 'chase';
+
+        // 7 Menara Kamera Siaran TV F1 Catalunya (Trackside Broadcast Towers)
+        const TV_CAMERA_TOWERS = [
+            { name: 'Tower 1 - Main Straight', pos: new THREE.Vector3(180, 24, 218) },
+            { name: 'Tower 2 - Turn 1-2 Elf', pos: new THREE.Vector3(-280, 28, 145) },
+            { name: 'Tower 3 - Turn 4 Repsol', pos: new THREE.Vector3(-660, 32, -140) },
+            { name: 'Tower 4 - Turn 5 Seat Hairpin', pos: new THREE.Vector3(-275, 34, -235) },
+            { name: 'Tower 5 - Turn 9 Campsa & Back Straight', pos: new THREE.Vector3(260, 35, -100) },
+            { name: 'Tower 6 - Turn 10 La Caixa Hairpin', pos: new THREE.Vector3(535, 28, 55) },
+            { name: 'Tower 7 - Turn 14 Final Sweeper', pos: new THREE.Vector3(625, 24, 130) }
+        ];
+        let currentTvTowerIndex = 0;
 
         function cycleCamera() {
             camIndex = (camIndex + 1) % CAM_MODES.length;
             currentCamMode = CAM_MODES[camIndex];
             const labels = {
                 'chase': 'Chase Cam',
+                'tv': '📺 TV Broadcast',
                 'drone': 'Drone Cam',
                 'cockpit': 'Cockpit Cam',
                 'orbit': 'Free Orbit'
@@ -1595,6 +1261,8 @@
                 controls.enabled = true;
             } else {
                 controls.enabled = false;
+                camera.fov = 55;
+                camera.updateProjectionMatrix();
             }
         }
 
@@ -1697,7 +1365,7 @@
             const delta = clock.getDelta();
 
             if (carModel) {
-                // Kecepatan adaptif sirkuit aktif (Catalunya / Marina Bay)
+                // Kecepatan adaptif sirkuit Barcelona-Catalunya
                 let speedFactor = circuitData.getSpeedFactor(trackProgress);
 
                 // 1. Logika Kecepatan Berdasarkan Pedal Gas & Rem Pengguna
@@ -1744,6 +1412,44 @@
                 const lapMs = Math.floor((elapsedLapMs % 1000) / 10);
                 document.getElementById('lap-time').innerText = 
                     `${String(lapSec).padStart(2, '0')}:${String(lapMs).padStart(2, '0')}`;
+
+                // Sector Tracker F1 Circuit de Barcelona-Catalunya
+                let sectorText = 'S1 (Turns 1-4)';
+                let sectorColor = '#c084fc';
+                if (trackProgress < 0.28) {
+                    sectorText = 'S1 (Turns 1-4)';
+                    sectorColor = '#c084fc';
+                } else if (trackProgress < 0.65) {
+                    sectorText = 'S2 (Turns 5-9)';
+                    sectorColor = '#38bdf8';
+                } else {
+                    sectorText = 'S3 (Turns 10-14)';
+                    sectorColor = '#4ade80';
+                }
+                const secEl = document.getElementById('sector-indicator');
+                if (secEl) {
+                    secEl.innerText = sectorText;
+                    secEl.style.color = sectorColor;
+                }
+
+                // Deteksi Zona DRS Catalunya (Zona 1: Pit Straight, Zona 2: Back Straight)
+                const inDRSZone = (trackProgress >= 0.88 || trackProgress <= 0.12 || (trackProgress >= 0.60 && trackProgress <= 0.70));
+                const drsBtn = document.getElementById('drs-toggle');
+                if (drsBtn) {
+                    if (drsActive) {
+                        drsBtn.style.background = 'linear-gradient(135deg, #e11d48, #f43f5e)';
+                        drsBtn.innerText = '🔥 DRS ON (+45 KM/H)';
+                        drsBtn.style.boxShadow = '0 0 16px rgba(244, 63, 94, 0.7)';
+                    } else if (inDRSZone) {
+                        drsBtn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+                        drsBtn.innerText = '⚡ DRS TERSEDIA';
+                        drsBtn.style.boxShadow = '0 0 14px rgba(16, 185, 129, 0.6)';
+                    } else {
+                        drsBtn.style.background = 'rgba(255, 255, 255, 0.12)';
+                        drsBtn.innerText = '⚡ DRS ZONA TUTUP';
+                        drsBtn.style.boxShadow = 'none';
+                    }
+                }
 
                 // 3. Posisi & Rotasi Mobil di Sepanjang Jalur Sirkuit dengan Offset Kemudi
                 const currentPos = trackCurve.getPointAt(trackProgress);
@@ -1800,13 +1506,34 @@
                 }
 
                 // ========================================================
-                // 4. SISTEM KAMERA INTERAKTIF (CHASE / DRONE / COCKPIT)
+                // 4. SISTEM KAMERA INTERAKTIF (CHASE / TV BROADCAST / DRONE / COCKPIT / ORBIT)
                 // ========================================================
                 if (currentCamMode === 'chase') {
                     // Kamera mengejar di belakang mobil mengikuti kemudi aktual
                     const cameraOffset = tangent.clone().multiplyScalar(-14).add(new THREE.Vector3(0, 4.8, 0));
                     camera.position.copy(actualCarPos).add(cameraOffset);
                     camera.lookAt(actualCarPos.clone().add(new THREE.Vector3(0, 1.4, 0)));
+                } else if (currentCamMode === 'tv') {
+                    // Kamera Siaran TV F1 (Pilih menara trackside terdekat dan tracking mulus)
+                    let bestTowerIdx = 0;
+                    let bestDistSq = Infinity;
+                    for (let i = 0; i < TV_CAMERA_TOWERS.length; i++) {
+                        const dSq = TV_CAMERA_TOWERS[i].pos.distanceToSquared(actualCarPos);
+                        if (dSq < bestDistSq) {
+                            bestDistSq = dSq;
+                            bestTowerIdx = i;
+                        }
+                    }
+                    currentTvTowerIndex = bestTowerIdx;
+                    const towerPos = TV_CAMERA_TOWERS[currentTvTowerIndex].pos;
+                    camera.position.lerp(towerPos, 0.12);
+                    camera.lookAt(actualCarPos.clone().add(new THREE.Vector3(0, 0.8, 0)));
+
+                    // Dynamic Telephoto Lens Zoom
+                    const dist = Math.sqrt(bestDistSq);
+                    const targetFov = THREE.MathUtils.clamp(26 + dist * 0.10, 28, 52);
+                    camera.fov += (targetFov - camera.fov) * 0.08;
+                    camera.updateProjectionMatrix();
                 } else if (currentCamMode === 'drone') {
                     // Kamera helikopter dari atas menyusuri sirkuit
                     const cameraOffset = tangent.clone().multiplyScalar(-26).add(new THREE.Vector3(0, 32, 0));
