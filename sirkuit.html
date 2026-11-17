@@ -785,12 +785,11 @@
     new THREE.Vector3(-476.45, 6.17, 27.09),
     new THREE.Vector3(-453.73, 4.62, 42.98),
     new THREE.Vector3(-430.41, 3.28, 58.38),
-    new THREE.Vector3(-407.53, 2.25, 74.46),
-    new THREE.Vector3(-393.77, 1.27, 99.89),
-    new THREE.Vector3(-380.92, 0.83, 107.66),
-    new THREE.Vector3(-352.00, 0.65, 104.50),
-    new THREE.Vector3(-334.50, 0.48, 102.56),
-    new THREE.Vector3(-307.72, 0.31, 99.93),
+    new THREE.Vector3(-407.53, 2.25, 75.80),
+    new THREE.Vector3(-386.20, 1.35, 93.80),
+    new THREE.Vector3(-362.40, 0.85, 96.80),
+    new THREE.Vector3(-335.50, 0.55, 98.20),
+    new THREE.Vector3(-307.72, 0.35, 99.50),
     new THREE.Vector3(-280.18, 0.34, 100.66),
     new THREE.Vector3(-253.43, 0.60, 101.56),
     new THREE.Vector3(-227.32, 1.11, 102.74),
@@ -941,7 +940,7 @@
                 fillIntensity: 0.6,
                 fillPos: [-200, 250, -100],
                 points: [
-        new THREE.Vector3(479.8, 48.18, 76.5),
+        new THREE.Vector3(472.0, 48.18, 76.5),
         new THREE.Vector3(491.2, 48.33, 48.9),
         new THREE.Vector3(500.1, 48.47, 16.7),
         new THREE.Vector3(506.5, 48.61, -15.9),
@@ -1098,10 +1097,10 @@
         new THREE.Vector3(424.7, 47.89, 286.4),
         new THREE.Vector3(424.5, 47.8, 257.8),
         new THREE.Vector3(424.8, 47.61, 229.1),
-        new THREE.Vector3(440.2, 47.59, 201.2),
-        new THREE.Vector3(450.4, 47.62, 168.6),
-        new THREE.Vector3(460.1, 47.88, 136.4),
-        new THREE.Vector3(454.5, 47.77, 104.8)
+        new THREE.Vector3(436.0, 47.59, 201.2),
+        new THREE.Vector3(444.0, 47.62, 168.6),
+        new THREE.Vector3(451.0, 47.88, 136.4),
+        new THREE.Vector3(448.0, 47.77, 104.8)
                 ],
                 getSpeedFactor: function(t) {
                     if ((t > 0.08 && t < 0.16) || 
@@ -1178,11 +1177,14 @@
 
         // Setup Three.js Scene
         const canvas = document.getElementById('webgl-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        renderer.outputEncoding = THREE.sRGBEncoding;
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(circuitData.skyColor);
@@ -1233,7 +1235,7 @@
 
         function createF1RacingLineMesh() {
             const numSamples = 800;
-            const ribbonWidth = 1.35;
+            const ribbonWidth = 0.75; // Ramping, dinamis, gaya F1 Broadcast / Sim
             const vertices = [];
             const colors = [];
             const indices = [];
@@ -1247,8 +1249,8 @@
                 const halfW = ribbonWidth / 2;
                 const pLeft = pt.clone().add(normal.clone().multiplyScalar(halfW));
                 const pRight = pt.clone().add(normal.clone().multiplyScalar(-halfW));
-                pLeft.y += 0.08;
-                pRight.y += 0.08;
+                pLeft.y += 0.04;
+                pRight.y += 0.04;
 
                 vertices.push(pLeft.x, pLeft.y, pLeft.z);
                 vertices.push(pRight.x, pRight.y, pRight.z);
@@ -1272,7 +1274,7 @@
             const mat = new THREE.MeshBasicMaterial({
                 vertexColors: true,
                 transparent: true,
-                opacity: 0.85,
+                opacity: 0.65,
                 side: THREE.DoubleSide,
                 depthWrite: false
             });
@@ -1296,134 +1298,7 @@
         createF1RacingLineMesh();
 
         // ========================================================
-        // 1C. PROCEDURAL 3D ASPHALT TRACK & TERRAIN (INSTANT BASE)
-        // Menjamin lintasan aspal, kerb & daratan selalu muncul seketika
-        // bahkan jika file GLB 54MB sedang dimuat atau diblokir CORS file://
-        // ========================================================
-        let proceduralTrackGroup = new THREE.Group();
-        scene.add(proceduralTrackGroup);
-
-        function createProceduralAsphaltTrack() {
-            const numSegments = 600;
-            const roadWidth = 14.0;
-            const curbWidth = 1.35;
-            
-            // 1. Lintasan Aspal Balap
-            const roadGeom = new THREE.BufferGeometry();
-            const roadVertices = [];
-            const roadUvs = [];
-            const roadIndices = [];
-
-            // 2. Kerb Merah Putih
-            const curbGeom = new THREE.BufferGeometry();
-            const curbVertices = [];
-            const curbColors = [];
-            const curbIndices = [];
-
-            for (let i = 0; i <= numSegments; i++) {
-                const t = i / numSegments;
-                const pt = trackCurve.getPointAt(t);
-                const tangent = trackCurve.getTangentAt(t).normalize();
-                const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-
-                const halfW = roadWidth / 2;
-                const pLeft = pt.clone().add(normal.clone().multiplyScalar(halfW));
-                const pRight = pt.clone().add(normal.clone().multiplyScalar(-halfW));
-
-                roadVertices.push(pLeft.x, pLeft.y, pLeft.z);
-                roadVertices.push(pRight.x, pRight.y, pRight.z);
-                roadUvs.push(0, t * 80);
-                roadUvs.push(1, t * 80);
-
-                if (i < numSegments) {
-                    const base = i * 2;
-                    roadIndices.push(base, base + 1, base + 2);
-                    roadIndices.push(base + 1, base + 3, base + 2);
-                }
-
-                // Kerb Kiri & Kanan
-                const pLeftOuter = pLeft.clone().add(normal.clone().multiplyScalar(curbWidth));
-                const pRightOuter = pRight.clone().add(normal.clone().multiplyScalar(-curbWidth));
-                pLeftOuter.y += 0.03;
-                pRightOuter.y += 0.03;
-
-                const isRed = (Math.floor(i / 3) % 2 === 0);
-                const curbCol = isRed ? new THREE.Color(0xdc2626) : new THREE.Color(0xf8fafc);
-
-                const cBase = (curbVertices.length / 3);
-                // Kiri
-                curbVertices.push(pLeft.x, pLeft.y + 0.02, pLeft.z);
-                curbVertices.push(pLeftOuter.x, pLeftOuter.y, pLeftOuter.z);
-                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
-                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
-
-                // Kanan
-                curbVertices.push(pRight.x, pRight.y + 0.02, pRight.z);
-                curbVertices.push(pRightOuter.x, pRightOuter.y, pRightOuter.z);
-                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
-                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
-
-                if (i < numSegments) {
-                    const cL = i * 4;
-                    curbIndices.push(cL, cL + 1, cL + 4);
-                    curbIndices.push(cL + 1, cL + 5, cL + 4);
-
-                    const cR = cL + 2;
-                    curbIndices.push(cR, cR + 1, cR + 4);
-                    curbIndices.push(cR + 1, cR + 5, cR + 4);
-                }
-            }
-
-            roadGeom.setAttribute('position', new THREE.Float32BufferAttribute(roadVertices, 3));
-            roadGeom.setAttribute('uv', new THREE.Float32BufferAttribute(roadUvs, 2));
-            roadGeom.setIndex(roadIndices);
-            roadGeom.computeVertexNormals();
-
-            const roadMat = new THREE.MeshStandardMaterial({
-                color: circuitData.isNight ? 0x121722 : 0x1c212a,
-                roughness: 0.88,
-                metalness: 0.12,
-                side: THREE.DoubleSide
-            });
-
-            const asphaltMesh = new THREE.Mesh(roadGeom, roadMat);
-            asphaltMesh.receiveShadow = true;
-            proceduralTrackGroup.add(asphaltMesh);
-
-            curbGeom.setAttribute('position', new THREE.Float32BufferAttribute(curbVertices, 3));
-            curbGeom.setAttribute('color', new THREE.Float32BufferAttribute(curbColors, 3));
-            curbGeom.setIndex(curbIndices);
-            curbGeom.computeVertexNormals();
-
-            const curbMat = new THREE.MeshStandardMaterial({
-                vertexColors: true,
-                roughness: 0.7,
-                metalness: 0.1,
-                side: THREE.DoubleSide
-            });
-
-            const curbMesh = new THREE.Mesh(curbGeom, curbMat);
-            proceduralTrackGroup.add(curbMesh);
-
-            // Lapangan Rumput / Tanah Dasar Sirkuit
-            const groundColor = circuitData.isNight ? 0x050a12 : 0x1e3b22;
-            const groundGeom = new THREE.PlaneGeometry(3800, 3800);
-            const groundMat = new THREE.MeshStandardMaterial({
-                color: groundColor,
-                roughness: 0.95,
-                metalness: 0.05
-            });
-            const groundMesh = new THREE.Mesh(groundGeom, groundMat);
-            groundMesh.rotation.x = -Math.PI / 2;
-            groundMesh.position.y = (circuitData.id === 'catalunya') ? -2.5 : 44.0;
-            groundMesh.receiveShadow = true;
-            proceduralTrackGroup.add(groundMesh);
-        }
-
-        createProceduralAsphaltTrack();
-
-        // ========================================================
-        // 2. LOAD MODEL 3D CIRCUIT & MOBIL F1 (ADAPTIF & DINAMIS)
+        // 2. LOAD MODEL 3D CIRCUIT & MOBIL F1 (ASLI & DETAIL TINGGI)
         // ========================================================
         let circuitModel = null;
         let carModel = null;
