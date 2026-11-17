@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Circuit de Barcelona-Catalunya - 3D F1 Grand Prix</title>
+    <title>3D F1 Grand Prix - Simulator Sirkuit F1</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,6 +69,69 @@
 
         .hud-top-bar > * {
             pointer-events: auto;
+        }
+
+        
+        /* Circuit Switcher Dropdown */
+        .circuit-switcher-dropdown {
+            position: relative;
+        }
+
+        .circuit-btn {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 25px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .circuit-btn:active {
+            transform: scale(0.95);
+        }
+
+        .circuit-menu {
+            position: absolute;
+            top: 45px;
+            left: 0;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 16px;
+            padding: 6px;
+            min-width: 250px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(16px);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .circuit-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .circuit-item:hover, .circuit-item:active {
+            background: rgba(56, 189, 248, 0.15);
+        }
+
+        .circuit-item.selected {
+            background: rgba(56, 189, 248, 0.25);
+            border: 1px solid rgba(56, 189, 248, 0.5);
         }
 
         .nav-back-btn {
@@ -447,9 +510,35 @@
 
     <!-- Top Navigation HUD -->
     <div class="hud-top-bar">
-        <a href="./index.html" class="nav-back-btn" id="btn-back">
-            📷 Kembali ke AR
-        </a>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <a href="./index.html" class="nav-back-btn" id="btn-back">
+                📷 Kembali ke AR
+            </a>
+            <!-- Circuit Switcher Button & Dropdown -->
+            <div class="circuit-switcher-dropdown">
+                <button class="circuit-btn" onclick="toggleCircuitDropdown(event)" id="circuit-btn">
+                    <span id="circuit-flag">🇪🇸</span>
+                    <span id="circuit-name">Catalunya</span>
+                    <span style="font-size: 0.65rem; opacity: 0.7;">▼</span>
+                </button>
+                <div class="circuit-menu" id="circuit-menu" style="display: none;">
+                    <div class="circuit-item" id="item-catalunya" onclick="switchCircuit('catalunya')">
+                        <span style="font-size: 1.25rem;">🇪🇸</span>
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Barcelona-Catalunya</div>
+                            <div style="font-size: 0.7rem; color: #38bdf8;">Spanish GP • Day Race • 14 Turns</div>
+                        </div>
+                    </div>
+                    <div class="circuit-item" id="item-marinabay" onclick="switchCircuit('marinabay')">
+                        <span style="font-size: 1.25rem;">🇸🇬</span>
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Marina Bay Circuit</div>
+                            <div style="font-size: 0.7rem; color: #facc15;">Singapore GP • Night Race • 19 Turns</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="car-badge" id="hud-car-badge">
             <div class="badge-title" id="hud-car-name">Red Bull RB19</div>
             <div class="badge-cat" id="hud-car-cat">Barcelona-Catalunya • Spanish F1 GP</div>
@@ -579,72 +668,41 @@
             }
         };
 
-        // Ambil parameter model mobil dari URL (contoh: ?model=ferrari)
+        // Ambil parameter model mobil & sirkuit dari URL
         const urlParams = new URLSearchParams(window.location.search);
         let selectedCarKey = urlParams.get('model') || urlParams.get('mobil') || 'redbull';
         if (!VEHICLES[selectedCarKey]) selectedCarKey = 'redbull';
         const carData = VEHICLES[selectedCarKey];
 
-        // Update HUD Info
-        document.getElementById('hud-car-name').innerText = carData.name;
-        document.getElementById('hud-car-badge').style.borderColor = carData.color;
-        document.getElementById('btn-back').href = `./index.html?model=${selectedCarKey}`;
-
-        // Setup Three.js Scene
-        const canvas = document.getElementById('webgl-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x060913);
-        scene.fog = new THREE.FogExp2(0x060913, 0.0006);
-
-        // Pencahayaan Sirkuit Siang Hari (Barcelona Spanish F1 GP Daylight)
-        scene.background = new THREE.Color(0x93c5fd);
-        scene.fog = new THREE.FogExp2(0x93c5fd, 0.00035);
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
-        scene.add(ambientLight);
-
-        const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x475569, 0.75);
-        scene.add(hemiLight);
-
-        const sunLight = new THREE.DirectionalLight(0xfffaf0, 1.6);
-        sunLight.position.set(300, 500, 250);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 10;
-        sunLight.shadow.camera.far = 1500;
-        const d = 500;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
-        scene.add(sunLight);
-
-        const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.5);
-        fillLight.position.set(-300, 300, -250);
-        scene.add(fillLight);
-
-        // Kamera & Controls
-        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3500);
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2 - 0.01;
-        camera.position.set(185, 12, 181.8);
-        controls.target.set(148, 6, 181.8);
-
+        
         // ========================================================
-        // 1. JALUR SIRKUIT BALAP F1 CIRCUIT DE BARCELONA-CATALUNYA
+        // DATA SIRKUIT F1: CATALUNYA & MARINA BAY
         // ========================================================
-        // 183 Koordinat waypoint presisi menyusuri aspal Circuit de Barcelona-Catalunya (~4.7 km loop)
-        const trackPoints = [
-    new THREE.Vector3(148.86, 5.86, 181.80),
+        const CIRCUITS = {
+            'catalunya': {
+                id: 'catalunya',
+                shortName: 'Catalunya',
+                name: 'Barcelona-Catalunya',
+                title: 'Circuit de Barcelona-Catalunya',
+                event: 'Barcelona-Catalunya • Spanish F1 GP',
+                flag: '🇪🇸',
+                file: './circuit_de_catalunya.glb',
+                scale: 100,
+                isNight: false,
+                skyColor: 0x93c5fd,
+                fogColor: 0x93c5fd,
+                fogDensity: 0.00035,
+                cameraInit: { pos: [185, 12, 181.8], target: [148, 6, 181.8] },
+                ambientIntensity: 0.95,
+                hemiIntensity: 0.75,
+                sunColor: 0xfffaf0,
+                sunIntensity: 1.6,
+                sunPos: [300, 500, 250],
+                fillColor: 0x93c5fd,
+                fillIntensity: 0.5,
+                fillPos: [-300, 300, -250],
+                points: [
+        new THREE.Vector3(148.86, 5.86, 181.80),
     new THREE.Vector3(123.65, 5.85, 181.80),
     new THREE.Vector3(98.37, 5.84, 181.80),
     new THREE.Vector3(73.58, 5.83, 181.80),
@@ -827,7 +885,344 @@
     new THREE.Vector3(227.10, 5.89, 181.80),
     new THREE.Vector3(201.98, 5.88, 181.80),
     new THREE.Vector3(177.09, 5.88, 181.80)
-];
+                ],
+                getSpeedFactor: function(t) {
+                    if ((t > 0.13 && t < 0.18) || 
+                        (t > 0.31 && t < 0.35) || 
+                        (t > 0.39 && t < 0.44) || 
+                        (t > 0.70 && t < 0.75) || 
+                        (t > 0.77 && t < 0.82)) {
+                        return 0.60;
+                    } else if ((t >= 0.0 && t < 0.13) || 
+                               (t > 0.62 && t < 0.70) || 
+                               (t > 0.88 && t <= 1.0)) {
+                        return 1.38;
+                    }
+                    return 1.05;
+                },
+                getLineColor: function(t) {
+                    if ((t >= 0.128 && t <= 0.150) ||
+                        (t >= 0.305 && t <= 0.325) ||
+                        (t >= 0.385 && t <= 0.405) ||
+                        (t >= 0.695 && t <= 0.718)) {
+                        return new THREE.Color(0xef4444); // Merah pengereman
+                    }
+                    if ((t > 0.150 && t < 0.180) ||
+                        (t > 0.325 && t < 0.355) ||
+                        (t > 0.405 && t < 0.445) ||
+                        (t > 0.470 && t < 0.550) ||
+                        (t > 0.718 && t < 0.760) ||
+                        (t > 0.775 && t < 0.835)) {
+                        return new THREE.Color(0xfacc15); // Kuning apex
+                    }
+                    return new THREE.Color(0x22c55e); // Hijau akselerasi
+                }
+            },
+            'marinabay': {
+                id: 'marinabay',
+                shortName: 'Marina Bay',
+                name: 'Marina Bay Street Circuit',
+                title: 'Marina Bay Street Circuit',
+                event: 'Marina Bay • Singapore F1 Night GP',
+                flag: '🇸🇬',
+                file: './marina_bay_street_circuit.glb',
+                scale: 1,
+                isNight: true,
+                skyColor: 0x060913,
+                fogColor: 0x0a101d,
+                fogDensity: 0.00045,
+                cameraInit: { pos: [490, 58, 100], target: [479.8, 48.2, 76.5] },
+                ambientIntensity: 0.80,
+                hemiIntensity: 0.60,
+                sunColor: 0xfef08a, // Lampu sorot malam kuning terang
+                sunIntensity: 1.8,
+                sunPos: [500, 350, 150],
+                fillColor: 0x38bdf8,
+                fillIntensity: 0.6,
+                fillPos: [-200, 250, -100],
+                points: [
+        new THREE.Vector3(479.8, 48.18, 76.5),
+        new THREE.Vector3(491.2, 48.33, 48.9),
+        new THREE.Vector3(500.1, 48.47, 16.7),
+        new THREE.Vector3(506.5, 48.61, -15.9),
+        new THREE.Vector3(512.2, 48.33, -50),
+        new THREE.Vector3(518, 48.33, -82.4),
+        new THREE.Vector3(523.7, 48.35, -115),
+        new THREE.Vector3(529.3, 48.33, -147.8),
+        new THREE.Vector3(535.9, 48.34, -181.2),
+        new THREE.Vector3(543.8, 48.23, -213.8),
+        new THREE.Vector3(568.2, 48.05, -236.6),
+        new THREE.Vector3(585.6, 47.89, -267),
+        new THREE.Vector3(572.2, 48.49, -299.4),
+        new THREE.Vector3(549.4, 48.5, -331),
+        new THREE.Vector3(545.2, 48.5, -307.9),
+        new THREE.Vector3(551.9, 48.43, -277.2),
+        new THREE.Vector3(572.1, 48.25, -266.2),
+        new THREE.Vector3(601.2, 47.84, -246.6),
+        new THREE.Vector3(626.8, 47.87, -223.7),
+        new THREE.Vector3(653.2, 47.86, -201.6),
+        new THREE.Vector3(680, 47.79, -179.9),
+        new THREE.Vector3(707.7, 47.18, -158),
+        new THREE.Vector3(718.1, 47, -127.3),
+        new THREE.Vector3(718.5, 46.97, -96.3),
+        new THREE.Vector3(736.9, 47.07, -70.5),
+        new THREE.Vector3(764.4, 46.78, -49.1),
+        new THREE.Vector3(792.5, 46.39, -30.7),
+        new THREE.Vector3(814.9, 46.44, -5.7),
+        new THREE.Vector3(808, 46.9, 22.4),
+        new THREE.Vector3(791.9, 46.88, 53.9),
+        new THREE.Vector3(775.1, 46.86, 83.7),
+        new THREE.Vector3(756.8, 46.82, 113.8),
+        new THREE.Vector3(740.2, 46.81, 143.4),
+        new THREE.Vector3(723.3, 46.82, 173.8),
+        new THREE.Vector3(708.8, 46.67, 204.6),
+        new THREE.Vector3(690.3, 46.45, 233.7),
+        new THREE.Vector3(673.8, 46.44, 263.4),
+        new THREE.Vector3(657.1, 46.45, 293.7),
+        new THREE.Vector3(640.9, 46.44, 323.4),
+        new THREE.Vector3(635.7, 46.51, 356.8),
+        new THREE.Vector3(626.6, 46.77, 382.5),
+        new THREE.Vector3(608.7, 46.78, 382.6),
+        new THREE.Vector3(578, 46.97, 380.8),
+        new THREE.Vector3(546.9, 47.29, 365),
+        new THREE.Vector3(521.5, 47.58, 343.1),
+        new THREE.Vector3(496.6, 47.59, 318.4),
+        new THREE.Vector3(474.8, 47.79, 292),
+        new THREE.Vector3(454.8, 47.88, 265.1),
+        new THREE.Vector3(431.5, 47.78, 244.2),
+        new THREE.Vector3(401.1, 47.49, 225),
+        new THREE.Vector3(381.9, 47.17, 206),
+        new THREE.Vector3(354.8, 46.61, 184.3),
+        new THREE.Vector3(328.4, 46.45, 163.4),
+        new THREE.Vector3(302.8, 46.53, 139.8),
+        new THREE.Vector3(276, 46.43, 117.7),
+        new THREE.Vector3(249.9, 46.44, 96.5),
+        new THREE.Vector3(220.2, 46.43, 78.8),
+        new THREE.Vector3(188.3, 46.42, 71.2),
+        new THREE.Vector3(154.8, 46.43, 70.4),
+        new THREE.Vector3(130, 46.4, 58.4),
+        new THREE.Vector3(126.1, 46.41, 24.5),
+        new THREE.Vector3(122.7, 46.23, -8.6),
+        new THREE.Vector3(96.4, 45.71, -25.7),
+        new THREE.Vector3(63.1, 45.68, -30.9),
+        new THREE.Vector3(29.5, 45.68, -33.1),
+        new THREE.Vector3(-3, 45.69, -34.8),
+        new THREE.Vector3(-36.4, 45.69, -37.6),
+        new THREE.Vector3(-70, 45.68, -42.9),
+        new THREE.Vector3(-99.8, 45.65, -37.1),
+        new THREE.Vector3(-109.9, 45.77, -6.6),
+        new THREE.Vector3(-110.8, 45.78, 28.9),
+        new THREE.Vector3(-126.7, 45.7, 45.7),
+        new THREE.Vector3(-161.6, 45.72, 49.5),
+        new THREE.Vector3(-195.1, 45.71, 49.4),
+        new THREE.Vector3(-229, 45.76, 54.2),
+        new THREE.Vector3(-254.3, 45.68, 42.4),
+        new THREE.Vector3(-266.9, 45.36, 12.3),
+        new THREE.Vector3(-278.3, 45.21, -16.7),
+        new THREE.Vector3(-305.2, 45.1, -38.1),
+        new THREE.Vector3(-338.7, 45.1, -39.3),
+        new THREE.Vector3(-373.9, 45.1, -42.5),
+        new THREE.Vector3(-406.8, 45.1, -42.8),
+        new THREE.Vector3(-439.2, 45.1, -46.4),
+        new THREE.Vector3(-473.2, 45.1, -46.7),
+        new THREE.Vector3(-506.1, 45.1, -48.6),
+        new THREE.Vector3(-538.1, 45.1, -49.4),
+        new THREE.Vector3(-572.2, 45.2, -53.6),
+        new THREE.Vector3(-598, 45.52, -44.7),
+        new THREE.Vector3(-614.2, 46.02, -17.9),
+        new THREE.Vector3(-624.8, 46.59, 11.1),
+        new THREE.Vector3(-625.1, 47.25, 43.5),
+        new THREE.Vector3(-625.8, 47.43, 77.4),
+        new THREE.Vector3(-619.6, 47.35, 109.2),
+        new THREE.Vector3(-613.8, 47.31, 142.2),
+        new THREE.Vector3(-609.7, 47.31, 174.3),
+        new THREE.Vector3(-605.4, 47.31, 206.6),
+        new THREE.Vector3(-601, 47.31, 239),
+        new THREE.Vector3(-596, 47.31, 271.8),
+        new THREE.Vector3(-591.4, 47.31, 305.2),
+        new THREE.Vector3(-587.1, 47.31, 338.3),
+        new THREE.Vector3(-582.5, 47.31, 370.7),
+        new THREE.Vector3(-576.4, 47.3, 404.8),
+        new THREE.Vector3(-569.9, 47.25, 436.4),
+        new THREE.Vector3(-568.6, 47.25, 469.4),
+        new THREE.Vector3(-564.9, 47.27, 502.2),
+        new THREE.Vector3(-563.8, 47.31, 536.7),
+        new THREE.Vector3(-559.6, 47.2, 570.2),
+        new THREE.Vector3(-534.9, 47.22, 581.5),
+        new THREE.Vector3(-504.6, 47.18, 590.6),
+        new THREE.Vector3(-479.1, 47.11, 607),
+        new THREE.Vector3(-452.5, 47.06, 631.5),
+        new THREE.Vector3(-430.9, 47.15, 635.8),
+        new THREE.Vector3(-412.9, 46.98, 612.6),
+        new THREE.Vector3(-404.2, 46.87, 578.6),
+        new THREE.Vector3(-402.1, 46.65, 545.9),
+        new THREE.Vector3(-403.7, 46.43, 512.2),
+        new THREE.Vector3(-412.6, 46.46, 480.1),
+        new THREE.Vector3(-425.5, 46.93, 448.7),
+        new THREE.Vector3(-437.3, 47.21, 417),
+        new THREE.Vector3(-446.6, 47.72, 384.7),
+        new THREE.Vector3(-454.4, 47.67, 354.4),
+        new THREE.Vector3(-460.8, 47.61, 320.9),
+        new THREE.Vector3(-467.7, 47.54, 289.2),
+        new THREE.Vector3(-471, 47.7, 254.4),
+        new THREE.Vector3(-453.8, 47.85, 242),
+        new THREE.Vector3(-422.7, 47.65, 235.1),
+        new THREE.Vector3(-389.8, 47.58, 233),
+        new THREE.Vector3(-356.1, 47.58, 236.2),
+        new THREE.Vector3(-322, 47.56, 237.6),
+        new THREE.Vector3(-288.2, 47.6, 240.5),
+        new THREE.Vector3(-255.4, 47.62, 241.2),
+        new THREE.Vector3(-222.8, 47.59, 243.1),
+        new THREE.Vector3(-188.8, 47.58, 246.1),
+        new THREE.Vector3(-157.1, 47.6, 247.5),
+        new THREE.Vector3(-124.1, 47.59, 250),
+        new THREE.Vector3(-90.3, 47.52, 251.2),
+        new THREE.Vector3(-57, 47.15, 252.6),
+        new THREE.Vector3(-24.1, 47.14, 256.1),
+        new THREE.Vector3(9, 47.15, 264.1),
+        new THREE.Vector3(41.1, 47.16, 276.9),
+        new THREE.Vector3(70.4, 47.02, 293.3),
+        new THREE.Vector3(99.5, 46.9, 310.4),
+        new THREE.Vector3(129.3, 47.15, 328.6),
+        new THREE.Vector3(159.1, 47.15, 345.9),
+        new THREE.Vector3(189.7, 47.16, 363.5),
+        new THREE.Vector3(219.4, 47.16, 380.6),
+        new THREE.Vector3(248.8, 47.45, 396.4),
+        new THREE.Vector3(277, 47.59, 417.8),
+        new THREE.Vector3(306.8, 47.82, 434.9),
+        new THREE.Vector3(330.9, 47.84, 425.4),
+        new THREE.Vector3(351, 47.86, 399.4),
+        new THREE.Vector3(369.4, 47.87, 371.8),
+        new THREE.Vector3(389.8, 47.87, 345.4),
+        new THREE.Vector3(408.1, 47.88, 315.9),
+        new THREE.Vector3(424.7, 47.89, 286.4),
+        new THREE.Vector3(424.5, 47.8, 257.8),
+        new THREE.Vector3(424.8, 47.61, 229.1),
+        new THREE.Vector3(440.2, 47.59, 201.2),
+        new THREE.Vector3(450.4, 47.62, 168.6),
+        new THREE.Vector3(460.1, 47.88, 136.4),
+        new THREE.Vector3(454.5, 47.77, 104.8)
+                ],
+                getSpeedFactor: function(t) {
+                    if ((t > 0.08 && t < 0.16) || 
+                        (t > 0.28 && t < 0.35) || 
+                        (t > 0.62 && t < 0.68) || 
+                        (t > 0.76 && t < 0.86)) {
+                        return 0.65;
+                    } else if ((t >= 0.0 && t < 0.08) || 
+                               (t > 0.18 && t < 0.26) || 
+                               (t > 0.88 && t <= 1.0)) {
+                        return 1.35;
+                    }
+                    return 1.05;
+                },
+                getLineColor: function(t) {
+                    if ((t >= 0.075 && t <= 0.095) ||
+                        (t >= 0.270 && t <= 0.290) ||
+                        (t >= 0.610 && t <= 0.630) ||
+                        (t >= 0.750 && t <= 0.770)) {
+                        return new THREE.Color(0xef4444); // Merah pengereman
+                    }
+                    if ((t > 0.095 && t < 0.160) ||
+                        (t > 0.290 && t < 0.350) ||
+                        (t > 0.630 && t < 0.680) ||
+                        (t > 0.770 && t < 0.860)) {
+                        return new THREE.Color(0xfacc15); // Kuning apex
+                    }
+                    return new THREE.Color(0x22c55e); // Hijau akselerasi
+                }
+            }
+        };
+
+
+        let selectedCircuitKey = urlParams.get('circuit') || urlParams.get('sirkuit') || 'catalunya';
+        if (!CIRCUITS[selectedCircuitKey]) selectedCircuitKey = 'catalunya';
+        const circuitData = CIRCUITS[selectedCircuitKey];
+
+        // Update Document Title & HUD Info
+        document.title = `${circuitData.title} - 3D F1 Grand Prix`;
+        document.getElementById('hud-car-name').innerText = carData.name;
+        document.getElementById('hud-car-badge').style.borderColor = carData.color;
+        document.getElementById('hud-car-cat').innerText = circuitData.event;
+        document.getElementById('btn-back').href = `./index.html?model=${selectedCarKey}`;
+
+        document.getElementById('circuit-flag').innerText = circuitData.flag;
+        document.getElementById('circuit-name').innerText = circuitData.shortName;
+
+        const selItem = document.getElementById('item-' + selectedCircuitKey);
+        if (selItem) selItem.classList.add('selected');
+
+        // Dropdown functions
+        function toggleCircuitDropdown(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('circuit-menu');
+            menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'flex' : 'none';
+        }
+
+        function switchCircuit(key) {
+            if (key === selectedCircuitKey) {
+                document.getElementById('circuit-menu').style.display = 'none';
+                return;
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.set('circuit', key);
+            window.location.href = url.toString();
+        }
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.circuit-switcher-dropdown')) {
+                const menu = document.getElementById('circuit-menu');
+                if (menu) menu.style.display = 'none';
+            }
+        });
+
+        // Setup Three.js Scene
+        const canvas = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(circuitData.skyColor);
+        scene.fog = new THREE.FogExp2(circuitData.fogColor, circuitData.fogDensity);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, circuitData.ambientIntensity);
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x475569, circuitData.hemiIntensity);
+        scene.add(hemiLight);
+
+        const sunLight = new THREE.DirectionalLight(circuitData.sunColor, circuitData.sunIntensity);
+        sunLight.position.set(...circuitData.sunPos);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 1500;
+        const d = 500;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        scene.add(sunLight);
+
+        const fillLight = new THREE.DirectionalLight(circuitData.fillColor, circuitData.fillIntensity);
+        fillLight.position.set(...circuitData.fillPos);
+        scene.add(fillLight);
+
+        // Kamera & Controls
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3500);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.01;
+        camera.position.set(...circuitData.cameraInit.pos);
+        controls.target.set(...circuitData.cameraInit.target);
+
+        // Kurva Sirkuit Aktif
+        const trackPoints = circuitData.points;
         const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'centripetal');
 
         // ========================================================
@@ -838,39 +1233,10 @@
 
         function createF1RacingLineMesh() {
             const numSamples = 800;
-            const ribbonWidth = 1.35; // Lebar racing line ~1.35 meter
+            const ribbonWidth = 1.35;
             const vertices = [];
             const colors = [];
             const indices = [];
-
-            // Algoritma warna F1 Racing Line dinamis:
-            // - HIJAU: Akselerasi penuh / Gas pol (Straightaway, DRS Zone, Exit)
-            // - KUNING: Transisi pengereman bertahap & Apex tikungan
-            // - MERAH: Titik pengereman keras (Heavy Braking Zone masuk tikungan)
-            function getLineColor(t) {
-                // Zona Pengereman Keras (Braking Zone)
-                // Turn 1-2 Elf: 0.128 - 0.150
-                // Turn 4 Repsol: 0.305 - 0.325
-                // Turn 5 Seat Hairpin: 0.385 - 0.405
-                // Turn 10 La Caixa: 0.695 - 0.718
-                if ((t >= 0.128 && t <= 0.150) ||
-                    (t >= 0.305 && t <= 0.325) ||
-                    (t >= 0.385 && t <= 0.405) ||
-                    (t >= 0.695 && t <= 0.718)) {
-                    return new THREE.Color(0xef4444); // Merah pengereman
-                }
-                // Zona Transisi / Apex Tikungan
-                if ((t > 0.150 && t < 0.180) ||
-                    (t > 0.325 && t < 0.355) ||
-                    (t > 0.405 && t < 0.445) ||
-                    (t > 0.470 && t < 0.550) ||
-                    (t > 0.718 && t < 0.760) ||
-                    (t > 0.775 && t < 0.835)) {
-                    return new THREE.Color(0xfacc15); // Kuning apex
-                }
-                // Jalur Akselerasi Penuh / DRS / Flat Out
-                return new THREE.Color(0x22c55e); // Hijau akselerasi
-            }
 
             for (let i = 0; i <= numSamples; i++) {
                 const t = i / numSamples;
@@ -881,13 +1247,13 @@
                 const halfW = ribbonWidth / 2;
                 const pLeft = pt.clone().add(normal.clone().multiplyScalar(halfW));
                 const pRight = pt.clone().add(normal.clone().multiplyScalar(-halfW));
-                pLeft.y += 0.08;  // Mengambang tipis 8cm di atas aspal agar tidak z-fighting
+                pLeft.y += 0.08;
                 pRight.y += 0.08;
 
                 vertices.push(pLeft.x, pLeft.y, pLeft.z);
                 vertices.push(pRight.x, pRight.y, pRight.z);
 
-                const col = getLineColor(t);
+                const col = circuitData.getLineColor(t);
                 colors.push(col.r, col.g, col.b);
                 colors.push(col.r, col.g, col.b);
 
@@ -927,7 +1293,6 @@
             }
         }
 
-        // Langsung generate 3D F1 Racing Line di sirkuit
         createF1RacingLineMesh();
 
         // ========================================================
@@ -948,6 +1313,8 @@
         function checkLoadComplete() {
             if (circuitLoaded && carLoaded) {
                 const loaderEl = document.getElementById('circuit-loader');
+                const titleEl = loaderEl.querySelector('.loader-title');
+                if (titleEl) titleEl.innerText = `Menyiapkan ${circuitData.title}...`;
                 loaderEl.classList.add('fade-out');
                 setTimeout(() => loaderEl.style.display = 'none', 500);
 
@@ -1296,22 +1663,8 @@
             const delta = clock.getDelta();
 
             if (carModel) {
-                // Kecepatan adaptif sirkuit (Sesuai Layout Resmi 14 Tikungan Spain_Circuit)
-                let speedFactor = 1.0;
-                // Tikungan tajam & zona pengereman (Turn 1-2 Elf: 0.13-0.18, Turn 4: 0.31-0.35, Turn 5 Hairpin: 0.39-0.44, Turn 10: 0.70-0.75, Stadium: 0.77-0.82)
-                if ((trackProgress > 0.13 && trackProgress < 0.18) || 
-                    (trackProgress > 0.31 && trackProgress < 0.35) || 
-                    (trackProgress > 0.39 && trackProgress < 0.44) || 
-                    (trackProgress > 0.70 && trackProgress < 0.75) || 
-                    (trackProgress > 0.77 && trackProgress < 0.82)) {
-                    speedFactor = 0.60; // Pengereman di tikungan tajam
-                } else if ((trackProgress >= 0.0 && trackProgress < 0.13) || 
-                           (trackProgress > 0.62 && trackProgress < 0.70) || 
-                           (trackProgress > 0.88 && trackProgress <= 1.0)) {
-                    speedFactor = 1.38; // Akselerasi penuh di trek lurus (Main Straight & Back Straight)
-                } else {
-                    speedFactor = 1.05;
-                }
+                // Kecepatan adaptif sirkuit aktif (Catalunya / Marina Bay)
+                let speedFactor = circuitData.getSpeedFactor(trackProgress);
 
                 // 1. Logika Kecepatan Berdasarkan Pedal Gas & Rem Pengguna
                 if (isGas) {
