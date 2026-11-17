@@ -513,6 +513,9 @@
             <button class="hud-btn drs-btn" id="drs-toggle" onclick="toggleDRS()">
                 ⚡ DRS BOOST
             </button>
+            <button class="hud-btn" id="racing-line-btn" onclick="toggleRacingLine()" style="background: rgba(34, 197, 94, 0.3); border: 1px solid rgba(34, 197, 94, 0.6);" title="Toggle 3D F1 Racing Line">
+                🏁 Line
+            </button>
             <button class="hud-btn" onclick="cycleCamera()">
                 🎥 <span id="cam-label">Chase Cam</span>
             </button>
@@ -633,39 +636,39 @@
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.maxPolarAngle = Math.PI / 2 - 0.01;
-        camera.position.set(185, 12, 178.2);
-        controls.target.set(148, 6, 178.2);
+        camera.position.set(185, 12, 181.8);
+        controls.target.set(148, 6, 181.8);
 
         // ========================================================
         // 1. JALUR SIRKUIT BALAP F1 CIRCUIT DE BARCELONA-CATALUNYA
         // ========================================================
         // 183 Koordinat waypoint presisi menyusuri aspal Circuit de Barcelona-Catalunya (~4.7 km loop)
         const trackPoints = [
-    new THREE.Vector3(148.86, 5.86, 178.20),
-    new THREE.Vector3(123.65, 5.85, 178.20),
-    new THREE.Vector3(98.37, 5.84, 178.20),
-    new THREE.Vector3(73.58, 5.83, 178.20),
-    new THREE.Vector3(48.45, 5.80, 178.20),
-    new THREE.Vector3(22.56, 5.73, 178.20),
-    new THREE.Vector3(-3.46, 5.66, 178.20),
-    new THREE.Vector3(-30.60, 5.35, 178.20),
-    new THREE.Vector3(-55.40, 5.10, 178.20),
-    new THREE.Vector3(-83.79, 4.72, 178.20),
-    new THREE.Vector3(-109.19, 4.32, 178.20),
-    new THREE.Vector3(-134.89, 3.84, 178.20),
-    new THREE.Vector3(-163.43, 3.23, 178.20),
-    new THREE.Vector3(-189.56, 2.63, 178.20),
-    new THREE.Vector3(-216.07, 1.98, 178.20),
-    new THREE.Vector3(-243.97, 1.32, 178.20),
-    new THREE.Vector3(-273.85, 0.76, 180.92),
-    new THREE.Vector3(-302.01, 0.12, 176.84),
-    new THREE.Vector3(-318.57, 0.06, 150.76),
-    new THREE.Vector3(-336.25, -0.07, 145.77),
-    new THREE.Vector3(-349.11, -0.22, 149.43),
-    new THREE.Vector3(-371.38, -0.37, 157.87),
-    new THREE.Vector3(-391.88, -0.96, 170.50),
-    new THREE.Vector3(-418.64, -1.29, 179.87),
-    new THREE.Vector3(-444.86, -1.58, 180.68),
+    new THREE.Vector3(148.86, 5.86, 181.80),
+    new THREE.Vector3(123.65, 5.85, 181.80),
+    new THREE.Vector3(98.37, 5.84, 181.80),
+    new THREE.Vector3(73.58, 5.83, 181.80),
+    new THREE.Vector3(48.45, 5.80, 181.80),
+    new THREE.Vector3(22.56, 5.73, 181.80),
+    new THREE.Vector3(-3.46, 5.66, 181.80),
+    new THREE.Vector3(-30.60, 5.35, 181.80),
+    new THREE.Vector3(-55.40, 5.10, 181.80),
+    new THREE.Vector3(-83.79, 4.72, 181.80),
+    new THREE.Vector3(-109.19, 4.32, 181.80),
+    new THREE.Vector3(-134.89, 3.84, 181.80),
+    new THREE.Vector3(-163.43, 3.23, 181.80),
+    new THREE.Vector3(-189.56, 2.63, 181.80),
+    new THREE.Vector3(-216.07, 1.98, 181.80),
+    new THREE.Vector3(-243.97, 1.32, 181.80),
+    new THREE.Vector3(-273.85, 0.76, 181.80),
+    new THREE.Vector3(-294.50, 0.45, 181.60),
+    new THREE.Vector3(-315.20, 0.15, 181.40),
+    new THREE.Vector3(-335.90, -0.15, 181.20),
+    new THREE.Vector3(-356.60, -0.45, 181.00),
+    new THREE.Vector3(-377.30, -0.75, 180.80),
+    new THREE.Vector3(-398.00, -1.05, 180.60),
+    new THREE.Vector3(-418.64, -1.29, 180.60),
+    new THREE.Vector3(-444.86, -1.58, 181.00),
     new THREE.Vector3(-470.39, -1.85, 181.15),
     new THREE.Vector3(-497.86, -2.10, 176.63),
     new THREE.Vector3(-516.88, -2.21, 160.45),
@@ -727,7 +730,7 @@
     new THREE.Vector3(-407.53, 2.25, 74.46),
     new THREE.Vector3(-393.77, 1.27, 99.89),
     new THREE.Vector3(-380.92, 0.83, 107.66),
-    new THREE.Vector3(-355.14, 0.52, 106.59),
+    new THREE.Vector3(-352.00, 0.65, 104.50),
     new THREE.Vector3(-334.50, 0.48, 102.56),
     new THREE.Vector3(-307.72, 0.31, 99.93),
     new THREE.Vector3(-280.18, 0.34, 100.66),
@@ -809,23 +812,123 @@
     new THREE.Vector3(610.31, 9.66, 161.83),
     new THREE.Vector3(587.92, 9.05, 172.63),
     new THREE.Vector3(563.57, 8.56, 176.15),
-    new THREE.Vector3(538.34, 8.23, 177.70),
-    new THREE.Vector3(512.44, 7.90, 178.48),
-    new THREE.Vector3(486.84, 7.55, 178.86),
-    new THREE.Vector3(460.35, 7.15, 177.07),
-    new THREE.Vector3(434.88, 6.78, 178.20),
-    new THREE.Vector3(409.13, 6.45, 178.20),
-    new THREE.Vector3(383.18, 6.18, 178.20),
-    new THREE.Vector3(356.62, 6.00, 178.20),
-    new THREE.Vector3(331.47, 5.91, 178.20),
-    new THREE.Vector3(305.83, 5.90, 178.20),
-    new THREE.Vector3(279.62, 5.89, 178.20),
-    new THREE.Vector3(252.38, 5.89, 178.20),
-    new THREE.Vector3(227.10, 5.89, 178.20),
-    new THREE.Vector3(201.98, 5.88, 178.20),
-    new THREE.Vector3(177.09, 5.88, 178.20)
+    new THREE.Vector3(538.34, 8.23, 178.60),
+    new THREE.Vector3(512.44, 7.90, 180.40),
+    new THREE.Vector3(486.84, 7.55, 181.50),
+    new THREE.Vector3(460.35, 7.15, 181.80),
+    new THREE.Vector3(434.88, 6.78, 181.80),
+    new THREE.Vector3(409.13, 6.45, 181.80),
+    new THREE.Vector3(383.18, 6.18, 181.80),
+    new THREE.Vector3(356.62, 6.00, 181.80),
+    new THREE.Vector3(331.47, 5.91, 181.80),
+    new THREE.Vector3(305.83, 5.90, 181.80),
+    new THREE.Vector3(279.62, 5.89, 181.80),
+    new THREE.Vector3(252.38, 5.89, 181.80),
+    new THREE.Vector3(227.10, 5.89, 181.80),
+    new THREE.Vector3(201.98, 5.88, 181.80),
+    new THREE.Vector3(177.09, 5.88, 181.80)
 ];
         const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'centripetal');
+
+        // ========================================================
+        // 1B. 3D DYNAMIC F1 RACING LINE (Visual Ribbon di Atas Aspal)
+        // ========================================================
+        let racingLineMesh = null;
+        let showRacingLine = true;
+
+        function createF1RacingLineMesh() {
+            const numSamples = 800;
+            const ribbonWidth = 1.35; // Lebar racing line ~1.35 meter
+            const vertices = [];
+            const colors = [];
+            const indices = [];
+
+            // Algoritma warna F1 Racing Line dinamis:
+            // - HIJAU: Akselerasi penuh / Gas pol (Straightaway, DRS Zone, Exit)
+            // - KUNING: Transisi pengereman bertahap & Apex tikungan
+            // - MERAH: Titik pengereman keras (Heavy Braking Zone masuk tikungan)
+            function getLineColor(t) {
+                // Zona Pengereman Keras (Braking Zone)
+                // Turn 1-2 Elf: 0.128 - 0.150
+                // Turn 4 Repsol: 0.305 - 0.325
+                // Turn 5 Seat Hairpin: 0.385 - 0.405
+                // Turn 10 La Caixa: 0.695 - 0.718
+                if ((t >= 0.128 && t <= 0.150) ||
+                    (t >= 0.305 && t <= 0.325) ||
+                    (t >= 0.385 && t <= 0.405) ||
+                    (t >= 0.695 && t <= 0.718)) {
+                    return new THREE.Color(0xef4444); // Merah pengereman
+                }
+                // Zona Transisi / Apex Tikungan
+                if ((t > 0.150 && t < 0.180) ||
+                    (t > 0.325 && t < 0.355) ||
+                    (t > 0.405 && t < 0.445) ||
+                    (t > 0.470 && t < 0.550) ||
+                    (t > 0.718 && t < 0.760) ||
+                    (t > 0.775 && t < 0.835)) {
+                    return new THREE.Color(0xfacc15); // Kuning apex
+                }
+                // Jalur Akselerasi Penuh / DRS / Flat Out
+                return new THREE.Color(0x22c55e); // Hijau akselerasi
+            }
+
+            for (let i = 0; i <= numSamples; i++) {
+                const t = i / numSamples;
+                const pt = trackCurve.getPointAt(t);
+                const tangent = trackCurve.getTangentAt(t).normalize();
+                const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+                const halfW = ribbonWidth / 2;
+                const pLeft = pt.clone().add(normal.clone().multiplyScalar(halfW));
+                const pRight = pt.clone().add(normal.clone().multiplyScalar(-halfW));
+                pLeft.y += 0.08;  // Mengambang tipis 8cm di atas aspal agar tidak z-fighting
+                pRight.y += 0.08;
+
+                vertices.push(pLeft.x, pLeft.y, pLeft.z);
+                vertices.push(pRight.x, pRight.y, pRight.z);
+
+                const col = getLineColor(t);
+                colors.push(col.r, col.g, col.b);
+                colors.push(col.r, col.g, col.b);
+
+                if (i < numSamples) {
+                    const base = i * 2;
+                    indices.push(base, base + 1, base + 2);
+                    indices.push(base + 1, base + 3, base + 2);
+                }
+            }
+
+            const geom = new THREE.BufferGeometry();
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geom.setIndex(indices);
+
+            const mat = new THREE.MeshBasicMaterial({
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.85,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+
+            racingLineMesh = new THREE.Mesh(geom, mat);
+            scene.add(racingLineMesh);
+        }
+
+        function toggleRacingLine() {
+            showRacingLine = !showRacingLine;
+            if (racingLineMesh) {
+                racingLineMesh.visible = showRacingLine;
+            }
+            const btn = document.getElementById('racing-line-btn');
+            if (btn) {
+                btn.style.opacity = showRacingLine ? '1.0' : '0.5';
+                btn.style.background = showRacingLine ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+            }
+        }
+
+        // Langsung generate 3D F1 Racing Line di sirkuit
+        createF1RacingLineMesh();
 
         // ========================================================
         // 2. LOAD MODEL 3D CIRCUIT DE BARCELONA-CATALUNYA & MOBIL F1
@@ -1193,17 +1296,18 @@
             const delta = clock.getDelta();
 
             if (carModel) {
-                // Kecepatan adaptif sirkuit (Kencang di trek lurus, melambat di tikungan tajam)
+                // Kecepatan adaptif sirkuit (Sesuai Layout Resmi 14 Tikungan Spain_Circuit)
                 let speedFactor = 1.0;
-                // Tikungan tajam & chicane (Turn 1-2 Elf: 0.08-0.12, Stadium chicane: 0.32-0.36, Turn 10 La Caixa: 0.70-0.74, Technical S3: 0.78-0.84)
-                if ((trackProgress > 0.08 && trackProgress < 0.12) || 
-                    (trackProgress > 0.32 && trackProgress < 0.36) || 
-                    (trackProgress > 0.70 && trackProgress < 0.74) || 
-                    (trackProgress > 0.78 && trackProgress < 0.84)) {
+                // Tikungan tajam & zona pengereman (Turn 1-2 Elf: 0.13-0.18, Turn 4: 0.31-0.35, Turn 5 Hairpin: 0.39-0.44, Turn 10: 0.70-0.75, Stadium: 0.77-0.82)
+                if ((trackProgress > 0.13 && trackProgress < 0.18) || 
+                    (trackProgress > 0.31 && trackProgress < 0.35) || 
+                    (trackProgress > 0.39 && trackProgress < 0.44) || 
+                    (trackProgress > 0.70 && trackProgress < 0.75) || 
+                    (trackProgress > 0.77 && trackProgress < 0.82)) {
                     speedFactor = 0.60; // Pengereman di tikungan tajam
-                } else if ((trackProgress >= 0.0 && trackProgress < 0.08) || 
+                } else if ((trackProgress >= 0.0 && trackProgress < 0.13) || 
                            (trackProgress > 0.62 && trackProgress < 0.70) || 
-                           (trackProgress > 0.90 && trackProgress <= 1.0)) {
+                           (trackProgress > 0.88 && trackProgress <= 1.0)) {
                     speedFactor = 1.38; // Akselerasi penuh di trek lurus (Main Straight & Back Straight)
                 } else {
                     speedFactor = 1.05;

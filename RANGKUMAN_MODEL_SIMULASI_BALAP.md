@@ -10,7 +10,7 @@ Aplikasi ini menggunakan format **GLTF / GLB (GL Transmission Format Binary)** y
 
 | No | Nama File Model | Kategori | Deskripsi & Spesifikasi |
 |---|---|---|---|
-| **1** | [`circuit_de_catalunya.glb`](file:///c:/Users/fakba/OneDrive/Dokumen/BSI/SEMESTER%205/TUGAS/VIRTUAL%20N%20AR/circuit_de_catalunya.glb) | **Environment / Racetrack** | Model 3D sirkuit balap Formula 1 Circuit de Barcelona-Catalunya (~53.89 MB) dengan skala 1:1 dunia nyata (~4.7 km keliling loop). Mencakup seluruh aspal lintasan, *pit building*, *pit lane*, tribun penonton utama (*grandstands*), tiang lampu start (*start lights gantry*), menara pit (*pit tower*), pagar pembatas (*catch fences*), kerb merah-putih, dan pepohonan. Dikalibrasi dengan matriks `scale.set(100, 100, 100)` dari unit sentimeter FBX ke skala meter Three.js. |
+| **1** | [`circuit_de_catalunya.glb`](file:///c:/Users/fakba/OneDrive/Dokumen/BSI/SEMESTER%205/TUGAS/VIRTUAL%20N%20AR/circuit_de_catalunya.glb) | **Environment / Racetrack** | Model 3D sirkuit balap Formula 1 Circuit de Barcelona-Catalunya (~53.89 MB) dengan skala 1:1 dunia nyata (~4.7 km keliling loop). Mencakup seluruh aspal lintasan, *pit building*, *pit lane*, tribun penonton utama (*grandstands*), tiang lampu start (*start lights gantry*), menara pit (*pit tower*), pagar pembatas (*catch fences*), kerb merah-putih, dan pepohonan. Dikalibrasi dengan matriks `scale.set(100, 100, 100)` dari unit sentimeter FBX ke skala meter Three.js. Di dalamnya terdapat beberapa cabang varian trek (jalur pintas *National Circuit* dan *chicane* lama); sistem JS telah disetel khusus untuk mengikuti **Layout Resmi Grand Prix 14 Tikungan (2023+)** sesuai [`Spain_Circuit.avif`](file:///c:/Users/fakba/OneDrive/Dokumen/BSI/SEMESTER%205/TUGAS/VIRTUAL%20N%20AR/Spain_Circuit.avif). |
 | **2** | [`redbull_RB19.glb`](file:///c:/Users/fakba/OneDrive/Dokumen/BSI/SEMESTER%205/TUGAS/VIRTUAL%20N%20AR/redbull_RB19.glb) | **Mobil Balap F1** | Model 3D mobil F1 Oracle Red Bull Racing RB19 (~9.78 MB). Dilengkapi material PBR (*Physically Based Rendering*), aero package sayap depan-belakang, ban Pirelli F1, dan livery khas Red Bull dengan audio mesin Honda RBPT. |
 | **3** | [`ferarri_f1-75.glb`](file:///c:/Users/fakba/OneDrive/Dokumen/BSI/SEMESTER%205/TUGAS/VIRTUAL%20N%20AR/ferarri_f1-75.glb) | **Mobil Balap F1** | Model 3D Scuderia Ferrari F1-75 (~11.20 MB). Menampilkan sidepod khas cekung *tub-style*, livery merah matte khas Ferrari, halo kokpit, dan audio mesin Ferrari 066/7 V6 Turbo. |
 | **4** | [`mercy-w15.glb`](file:///c:/Users/fakba/OneDrive/Dokumen/BSI/SEMESTER%205/TUGAS/VIRTUAL%20N%20AR/mercy-w15.glb) | **Mobil Balap F1** | Model 3D Mercedes-AMG PETRONAS F1 W15 (~3.09 MB). Livery perak-hitam dengan aksen hijau toska PETRONAS dan audio mesin Mercedes-AMG M15 E Performance. |
@@ -104,9 +104,10 @@ $$v_{\text{aktual}} = v_{\text{base}} \times f_{\text{track}}(t) \times f_{\text
 
 $$\Delta \text{progress} = v_{\text{aktual}} \times (\Delta t_{\text{frame}} \times 60)$$
 
-1. **Faktor Geometri Sirkuit ($f_{\text{track}}$):**
-   * **Trek Lurus Utama & Belakang:** $f_{\text{track}} = 1.38$ (akselerasi penuh).
-   * **Tikungan Tajam & Chicane (Elf, Stadium, La Caixa):** $f_{\text{track}} = 0.60$ (deselerasi pengereman realistis).
+1. **Faktor Geometri Sirkuit ($f_{\text{track}}$) Sesuai Layout 14 Tikungan Spain_Circuit:**
+   * **Trek Lurus Utama (DRS 2) & Trek Lurus Belakang (DRS 1):** $f_{\text{track}} = 1.38$ (akselerasi penuh hingga 320–350 km/jam).
+   * **Tikungan Tajam & Chicane (Turn 1–2 Elf, Turn 4 Repsol, Turn 5 Seat Hairpin, Turn 10 La Caixa, Turn 11–12 Stadium):** $f_{\text{track}} = 0.60$ (deselerasi pengereman realistis).
+   * **Tikungan Berkecepatan Tinggi (Turn 3 Curva Renault, Turn 9 Campsa, Turn 13–14 Final Sweeper tanpa chicane):** $f_{\text{track}} = 1.05$ (melaju kencang stabil).
 2. **Faktor Kontrol Pengemudi ($f_{\text{user}}$):**
    * **Pedal GAS Ditekan:** $f_{\text{user}} \rightarrow 1.65$ (melesat hingga $330 - 350\text{ km/jam}$).
    * **Pedal REM Ditekan:** $f_{\text{user}} \rightarrow 0.18$ (mengerem keras hingga $25 - 40\text{ km/jam}$).
@@ -124,7 +125,29 @@ Sistem kamera terikat secara parametrik pada posisi $\mathbf{P}_{\text{aktual}}$
 
 ---
 
-### G. Model Sintesis Suara Mesin (Audio Pitch Synthesis Model)
+### G. Model Visualisasi Racing Line Dinamis 3D (3D Dynamic F1 Racing Line Ribbon)
+Untuk membantu pengemudi memvisualisasikan jalur balap (*racing line*) paling optimal layaknya game balap modern (F1 23/24), sistem Three.js me-render pita poligon 3D (*dynamic ribbon mesh*) sepanjang $4.65\text{ km}$ keliling sirkuit yang mengambang tipis $+8\text{ cm}$ di atas aspal:
+* **Perhitungan Geometri Ribbon:** Di setiap interpolasi kurva $t \in [0, 1]$, dihitung vektor normal horizontal $\vec{N} = (-\vec{T}_z, 0, \vec{T}_x)$ tegak lurus terhadap vektor laju $\vec{T}$. Dua pasang verteks di-generate selebar $W = 1.35\text{ m}$:
+  $$\vec{V}_{\text{kiri}} = \vec{P}(t) + \frac{W}{2}\vec{N} + (0, 0.08, 0)$$
+  $$\vec{V}_{\text{kanan}} = \vec{P}(t) - \frac{W}{2}\vec{N} + (0, 0.08, 0)$$
+* **Vertex Color Coding Sesuai Karakteristik 14 Tikungan F1:**
+  * 🔴 **Merah (Heavy Braking Zone):** Area pengereman keras saat memasuki tikungan tajam (Turn 1-2 Elf $t \approx 0.13-0.15$, Turn 4 Repsol $t \approx 0.31-0.33$, Turn 5 Seat Hairpin $t \approx 0.39-0.41$, dan Turn 10 La Caixa $t \approx 0.70-0.72$).
+  * 🟡 **Kuning (Apex & Transition Zone):** Titik potong dalam kerb (*apex*) serta transisi akselerasi keluar tikungan.
+  * 🟢 **Hijau (Full Throttle / DRS Straight):** Jalur gas penuh di trek lurus utama (*Main Straight*) dan trek lurus belakang (*Back Straight*).
+* **HUD Toggle:** Dilengkapi tombol interaktif `🏁 Line` di HUD untuk mengaktifkan/menonaktifkan garis balap secara instan tanpa mengganggu performa rendering.
+
+---
+
+### H. Model Penyelesaian "Dua Lintasan" (Dual Track Disambiguation Model)
+Model 3D Circuit de Barcelona-Catalunya (`circuit_de_catalunya.glb`) merupakan model sirkuit komprehensif yang memuat beberapa varian konfigurasi lintasan sejarah balap. Modul JS `sirkuit.html` telah diprogram khusus untuk memfilter dan membedakan dua lintasan bercabang tersebut:
+1. **Trek Lurus Utama vs Pit Lane (Main Straight vs Pit Wall):** Aspal garis start memiliki lebar $23\text{ m}$ yang mencakup lintasan balap dan *pit lane*. Koordinat $Z$ diposisikan secara presisi pada $Z = 181.80\text{ m}$ (langsung melintasi kotak *grid* F1 resmi), memberikan jarak aman $>8\text{ m}$ dari dinding *pit wall* sehingga mobil tidak lagi menabrak pembatas pit.
+2. **Turn 1 GP vs National Circuit Bypass (`road_12`):** Di ujung trek lurus sebelum Turn 1, terdapat percabangan jalan penghubung sirkuit nasional (*National Circuit*). Jalur balap F1 diprogram mengabaikan cabang $Z \le 170\text{ m}$ dan tetap lurus di $Z \approx 181\text{ m}$ menuju *chicane* resmi Turn 1 & 2 (Elf).
+3. **Turn 10 (Curva La Caixa):** Sirkuit memiliki lintasan *hairpin* tajam dalam dan lintasan lengkung luar. Lintasan balap F1 disesuaikan menyusuri kurva beraspal mulus dengan radius ideal tanpa memotong rumput *infield*.
+4. **Sector 3 (Turn 13-14 vs Chicane Lama):** Sesuai layout resmi F1 2023+ (`Spain_Circuit.avif`), mobil diarahkan melalui dua tikungan cepat kanan (Turn 13 dan 14) langsung menuju trek lurus tanpa melewati *chicane* buatan 2007-2022.
+
+---
+
+### I. Model Sintesis Suara Mesin (Audio Pitch Synthesis Model)
 * **Web Audio API Oscillator:** Menggunakan gelombang *sawtooth* dengan filter *bandpass* ($Q=2.5$). Frekuensi suara dinaikkan linier sesuai kecepatan:
 
 $$f_{\text{audio}} = 160 + (v_{\text{kmh}} \times 3.8)\text{ Hz}$$
@@ -137,7 +160,7 @@ $$f_{\text{audio}} = 160 + (v_{\text{kmh}} \times 3.8)\text{ Hz}$$
 
 Untuk mewujudkan pengalaman balap F1 interaktif di sirkuit Catalunya, sistem mengombinasikan:
 1. **7 Model 3D Asset** (Sirkuit Catalunya skala penuh 1:1, 4 model mobil F1 Red Bull/Ferrari/Mercedes/Aston Martin, 1 motor Ducati MotoGP, dan 1 model prosedural fallback).
-2. **5 Model Matematika & Fisika** (Interpolasi *Catmull-Rom Spline*, vektor arah *Lookahead Tangent*, kemudi melintang *Lateral Vector Steering*, kinematika *Dynamic Acceleration/Braking*, dan *Cinematic Camera Rig*).
+2. **7 Model Matematika & Komputasi** (Interpolasi *Catmull-Rom Spline*, *Dual Track Disambiguation*, vektor arah *Lookahead Tangent*, kemudi melintang *Lateral Steering*, kinematika *Dynamic Acceleration/Braking*, visualisasi *3D Dynamic Racing Line Ribbon*, dan *Cinematic Camera Rig*).
 
 Seluruh implementasi kode dapat diakses langsung pada file sumber utama:
 * **Halaman Sirkuit & Simulasi:** [`sirkuit.html`](file:///c:/Users/fakba/OneDrive/Dokumen/BSI/SEMESTER%205/TUGAS/VIRTUAL%20N%20AR/sirkuit.html)
