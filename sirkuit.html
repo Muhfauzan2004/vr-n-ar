@@ -1296,7 +1296,134 @@
         createF1RacingLineMesh();
 
         // ========================================================
-        // 2. LOAD MODEL 3D CIRCUIT DE BARCELONA-CATALUNYA & MOBIL F1
+        // 1C. PROCEDURAL 3D ASPHALT TRACK & TERRAIN (INSTANT BASE)
+        // Menjamin lintasan aspal, kerb & daratan selalu muncul seketika
+        // bahkan jika file GLB 54MB sedang dimuat atau diblokir CORS file://
+        // ========================================================
+        let proceduralTrackGroup = new THREE.Group();
+        scene.add(proceduralTrackGroup);
+
+        function createProceduralAsphaltTrack() {
+            const numSegments = 600;
+            const roadWidth = 14.0;
+            const curbWidth = 1.35;
+            
+            // 1. Lintasan Aspal Balap
+            const roadGeom = new THREE.BufferGeometry();
+            const roadVertices = [];
+            const roadUvs = [];
+            const roadIndices = [];
+
+            // 2. Kerb Merah Putih
+            const curbGeom = new THREE.BufferGeometry();
+            const curbVertices = [];
+            const curbColors = [];
+            const curbIndices = [];
+
+            for (let i = 0; i <= numSegments; i++) {
+                const t = i / numSegments;
+                const pt = trackCurve.getPointAt(t);
+                const tangent = trackCurve.getTangentAt(t).normalize();
+                const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+                const halfW = roadWidth / 2;
+                const pLeft = pt.clone().add(normal.clone().multiplyScalar(halfW));
+                const pRight = pt.clone().add(normal.clone().multiplyScalar(-halfW));
+
+                roadVertices.push(pLeft.x, pLeft.y, pLeft.z);
+                roadVertices.push(pRight.x, pRight.y, pRight.z);
+                roadUvs.push(0, t * 80);
+                roadUvs.push(1, t * 80);
+
+                if (i < numSegments) {
+                    const base = i * 2;
+                    roadIndices.push(base, base + 1, base + 2);
+                    roadIndices.push(base + 1, base + 3, base + 2);
+                }
+
+                // Kerb Kiri & Kanan
+                const pLeftOuter = pLeft.clone().add(normal.clone().multiplyScalar(curbWidth));
+                const pRightOuter = pRight.clone().add(normal.clone().multiplyScalar(-curbWidth));
+                pLeftOuter.y += 0.03;
+                pRightOuter.y += 0.03;
+
+                const isRed = (Math.floor(i / 3) % 2 === 0);
+                const curbCol = isRed ? new THREE.Color(0xdc2626) : new THREE.Color(0xf8fafc);
+
+                const cBase = (curbVertices.length / 3);
+                // Kiri
+                curbVertices.push(pLeft.x, pLeft.y + 0.02, pLeft.z);
+                curbVertices.push(pLeftOuter.x, pLeftOuter.y, pLeftOuter.z);
+                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
+                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
+
+                // Kanan
+                curbVertices.push(pRight.x, pRight.y + 0.02, pRight.z);
+                curbVertices.push(pRightOuter.x, pRightOuter.y, pRightOuter.z);
+                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
+                curbColors.push(curbCol.r, curbCol.g, curbCol.b);
+
+                if (i < numSegments) {
+                    const cL = i * 4;
+                    curbIndices.push(cL, cL + 1, cL + 4);
+                    curbIndices.push(cL + 1, cL + 5, cL + 4);
+
+                    const cR = cL + 2;
+                    curbIndices.push(cR, cR + 1, cR + 4);
+                    curbIndices.push(cR + 1, cR + 5, cR + 4);
+                }
+            }
+
+            roadGeom.setAttribute('position', new THREE.Float32BufferAttribute(roadVertices, 3));
+            roadGeom.setAttribute('uv', new THREE.Float32BufferAttribute(roadUvs, 2));
+            roadGeom.setIndex(roadIndices);
+            roadGeom.computeVertexNormals();
+
+            const roadMat = new THREE.MeshStandardMaterial({
+                color: circuitData.isNight ? 0x121722 : 0x1c212a,
+                roughness: 0.88,
+                metalness: 0.12,
+                side: THREE.DoubleSide
+            });
+
+            const asphaltMesh = new THREE.Mesh(roadGeom, roadMat);
+            asphaltMesh.receiveShadow = true;
+            proceduralTrackGroup.add(asphaltMesh);
+
+            curbGeom.setAttribute('position', new THREE.Float32BufferAttribute(curbVertices, 3));
+            curbGeom.setAttribute('color', new THREE.Float32BufferAttribute(curbColors, 3));
+            curbGeom.setIndex(curbIndices);
+            curbGeom.computeVertexNormals();
+
+            const curbMat = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.7,
+                metalness: 0.1,
+                side: THREE.DoubleSide
+            });
+
+            const curbMesh = new THREE.Mesh(curbGeom, curbMat);
+            proceduralTrackGroup.add(curbMesh);
+
+            // Lapangan Rumput / Tanah Dasar Sirkuit
+            const groundColor = circuitData.isNight ? 0x050a12 : 0x1e3b22;
+            const groundGeom = new THREE.PlaneGeometry(3800, 3800);
+            const groundMat = new THREE.MeshStandardMaterial({
+                color: groundColor,
+                roughness: 0.95,
+                metalness: 0.05
+            });
+            const groundMesh = new THREE.Mesh(groundGeom, groundMat);
+            groundMesh.rotation.x = -Math.PI / 2;
+            groundMesh.position.y = (circuitData.id === 'catalunya') ? -2.5 : 44.0;
+            groundMesh.receiveShadow = true;
+            proceduralTrackGroup.add(groundMesh);
+        }
+
+        createProceduralAsphaltTrack();
+
+        // ========================================================
+        // 2. LOAD MODEL 3D CIRCUIT & MOBIL F1 (ADAPTIF & DINAMIS)
         // ========================================================
         let circuitModel = null;
         let carModel = null;
@@ -1325,11 +1452,27 @@
             }
         }
 
-        // 1. Memuat Model 3D Circuit de Barcelona-Catalunya (Skala Penuh 1:1 Nyata ~51.4MB)
-        loader.load('./circuit_de_catalunya.glb', (gltf) => {
+        // Cek jika dibuka langsung melalui file:// protokol di browser laptop
+        const isFileProtocol = window.location.protocol === 'file:';
+        if (isFileProtocol) {
+            console.info('⚠️ Membuka via file://. Browser membatasi pemanggilan GLB besar via CORS. Menggunakan lintasan prosedural beresolusi tinggi.');
+            const banner = document.createElement('div');
+            banner.style.cssText = `
+                position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+                background: rgba(234, 179, 8, 0.92); color: #000; padding: 8px 18px;
+                border-radius: 20px; font-size: 0.78rem; font-weight: 700; z-index: 100;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.4); text-align: center; max-width: 90%;
+            `;
+            banner.innerHTML = `⚠️ Dibuka via <code>file://</code> lokal. Untuk memuat gedung & tribun 3D penuh (~54MB), gunakan <b>Live Server</b> atau buka <a href="https://muhfauzan2004.github.io/vr-n-ar/sirkuit.html" target="_blank" style="color: #000; text-decoration: underline; font-weight: 800;">GitHub Pages Resmi</a>.`;
+            document.body.appendChild(banner);
+            setTimeout(() => { if (banner) banner.style.display = 'none'; }, 9000);
+        }
+
+        // 1. Memuat Model 3D Sirkuit (Dinamis: Catalunya atau Marina Bay)
+        loader.load(circuitData.file, (gltf) => {
             circuitModel = gltf.scene;
-            // Skala 100x untuk menyesuaikan koordinat asli FBX Sketchfab ke skala meter dunia nyata
-            circuitModel.scale.set(100, 100, 100);
+            const s = circuitData.scale;
+            circuitModel.scale.set(s, s, s);
             circuitModel.updateMatrixWorld(true);
             circuitModel.traverse((child) => {
                 if (child.isMesh) {
@@ -1343,10 +1486,11 @@
         }, (xhr) => {
             if (xhr.lengthComputable && !circuitLoaded) {
                 const p = Math.round((xhr.loaded / xhr.total) * 100);
-                document.getElementById('loader-status').innerText = `Memuat Circuit de Barcelona-Catalunya... ${p}%`;
+                document.getElementById('loader-status').innerText = `Memuat ${circuitData.name}... ${p}%`;
             }
         }, (err) => {
-            console.warn('Gagal memuat sirkuit Catalunya:', err);
+            console.warn(`Gagal memuat GLB sirkuit ${circuitData.name} (mungkin offline/CORS file://), menggunakan lintasan prosedural:`, err);
+            // Tetap izinkan balapan berjalan dengan lintasan prosedural berkualitas tinggi
             circuitLoaded = true;
             checkLoadComplete();
         });
