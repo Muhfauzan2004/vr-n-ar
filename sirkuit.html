@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D F1 Grand Prix - Simulator Sirkuit F1</title>
+    <title>Circuit de Barcelona-Catalunya - 3D F1 Grand Prix</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,7 +71,6 @@
             pointer-events: auto;
         }
 
-        
         .nav-back-btn {
             background: rgba(15, 23, 42, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -441,27 +440,19 @@
         </div>
     </div>
 
-    <!-- Lap Timer & Sector HUD -->
+    <!-- Lap Timer HUD -->
     <div class="lap-badge">
-        ⏱️ LAP <span id="lap-counter" style="color: #38bdf8;">1</span> • <span id="lap-time" style="color: #22c55e;">00:00.00</span> • <span id="sector-indicator" style="color: #c084fc; font-weight: 800;">S1 (Turns 1-4)</span>
+        ⏱️ LAP <span id="lap-counter" style="color: #38bdf8;">1</span> • <span id="lap-time" style="color: #22c55e;">00:00.00</span>
     </div>
 
     <!-- Top Navigation HUD -->
     <div class="hud-top-bar">
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <a href="./index.html" class="nav-back-btn" id="btn-back">
-                📷 Kembali ke AR
-            </a>
-            <!-- Catalunya Circuit Badge -->
-            <div style="display: flex; align-items: center; gap: 7px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid rgba(56, 189, 248, 0.45); padding: 7px 14px; border-radius: 20px; color: #fff; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);">
-                <span style="font-size: 1.1rem;">🇪🇸</span>
-                <span style="font-family: 'Orbitron', sans-serif; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.5px;">Barcelona-Catalunya</span>
-                <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 7px; border-radius: 6px; font-size: 0.65rem; font-weight: 700;">14 TURNS</span>
-            </div>
-        </div>
+        <a href="./index.html" class="nav-back-btn" id="btn-back">
+            📷 Kembali ke AR
+        </a>
         <div class="car-badge" id="hud-car-badge">
             <div class="badge-title" id="hud-car-name">Red Bull RB19</div>
-            <div class="badge-cat" id="hud-car-cat">Spanish F1 GP • 4.675 KM</div>
+            <div class="badge-cat" id="hud-car-cat">Barcelona-Catalunya • Spanish F1 GP</div>
         </div>
     </div>
 
@@ -588,42 +579,72 @@
             }
         };
 
-        // Ambil parameter model mobil & sirkuit dari URL
+        // Ambil parameter model mobil dari URL (contoh: ?model=ferrari)
         const urlParams = new URLSearchParams(window.location.search);
         let selectedCarKey = urlParams.get('model') || urlParams.get('mobil') || 'redbull';
         if (!VEHICLES[selectedCarKey]) selectedCarKey = 'redbull';
         const carData = VEHICLES[selectedCarKey];
 
-        
+        // Update HUD Info
+        document.getElementById('hud-car-name').innerText = carData.name;
+        document.getElementById('hud-car-badge').style.borderColor = carData.color;
+        document.getElementById('btn-back').href = `./index.html?model=${selectedCarKey}`;
+
+        // Setup Three.js Scene
+        const canvas = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x060913);
+        scene.fog = new THREE.FogExp2(0x060913, 0.0006);
+
+        // Pencahayaan Sirkuit Siang Hari (Barcelona Spanish F1 GP Daylight)
+        scene.background = new THREE.Color(0x93c5fd);
+        scene.fog = new THREE.FogExp2(0x93c5fd, 0.00035);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x475569, 0.75);
+        scene.add(hemiLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfffaf0, 1.6);
+        sunLight.position.set(300, 500, 250);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 1500;
+        const d = 500;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        scene.add(sunLight);
+
+        const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.5);
+        fillLight.position.set(-300, 300, -250);
+        scene.add(fillLight);
+
+        // Kamera & Controls
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3500);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.01;
+        camera.position.set(185, 12, 181.8);
+        controls.target.set(148, 6, 181.8);
+
         // ========================================================
-        // DATA SIRKUIT F1: CIRCUIT DE BARCELONA-CATALUNYA
+        // 1. JALUR SIRKUIT BALAP F1 CIRCUIT DE BARCELONA-CATALUNYA
         // ========================================================
-        const circuitData = {
-            id: 'catalunya',
-            shortName: 'Catalunya',
-            name: 'Circuit de Barcelona-Catalunya',
-            title: 'Circuit de Barcelona-Catalunya',
-            event: 'Barcelona-Catalunya • Spanish F1 GP',
-            flag: '🇪🇸',
-            file: './circuit_de_catalunya.glb',
-            scale: 100,
-            isNight: false,
-            skyColor: 0x7dd3fc,
-            fogColor: 0xb0d8eb,
-            fogDensity: 0.00025,
-            cameraInit: { pos: [185, 12, 181.8], target: [148, 6, 181.8] },
-            ambientColor: 0xffffff,
-            ambientIntensity: 0.92,
-            hemiIntensity: 0.72,
-            sunColor: 0xfffbeb,
-            sunIntensity: 1.70,
-            sunPos: [350, 550, 250],
-            fillColor: 0xdbeafe,
-            fillIntensity: 0.50,
-            fillPos: [-300, 300, -250],
-            exposure: 1.12,
-                points: [
-        new THREE.Vector3(148.86, 5.86, 181.80),
+        // 183 Koordinat waypoint presisi menyusuri aspal Circuit de Barcelona-Catalunya (~4.7 km loop)
+        const trackPoints = [
+    new THREE.Vector3(148.86, 5.86, 181.80),
     new THREE.Vector3(123.65, 5.85, 181.80),
     new THREE.Vector3(98.37, 5.84, 181.80),
     new THREE.Vector3(73.58, 5.83, 181.80),
@@ -706,11 +727,12 @@
     new THREE.Vector3(-476.45, 6.17, 27.09),
     new THREE.Vector3(-453.73, 4.62, 42.98),
     new THREE.Vector3(-430.41, 3.28, 58.38),
-    new THREE.Vector3(-407.53, 2.25, 75.80),
-    new THREE.Vector3(-386.20, 1.35, 93.80),
-    new THREE.Vector3(-362.40, 0.85, 96.80),
-    new THREE.Vector3(-335.50, 0.55, 98.20),
-    new THREE.Vector3(-307.72, 0.35, 99.50),
+    new THREE.Vector3(-407.53, 2.25, 74.46),
+    new THREE.Vector3(-393.77, 1.27, 99.89),
+    new THREE.Vector3(-380.92, 0.83, 107.66),
+    new THREE.Vector3(-352.00, 0.65, 104.50),
+    new THREE.Vector3(-334.50, 0.48, 102.56),
+    new THREE.Vector3(-307.72, 0.31, 99.93),
     new THREE.Vector3(-280.18, 0.34, 100.66),
     new THREE.Vector3(-253.43, 0.60, 101.56),
     new THREE.Vector3(-227.32, 1.11, 102.74),
@@ -749,13 +771,16 @@
     new THREE.Vector3(387.31, 18.52, 13.58),
     new THREE.Vector3(411.36, 18.19, 27.05),
     new THREE.Vector3(435.75, 17.83, 41.19),
-    new THREE.Vector3(455.50, 17.65, 34.50),
-    new THREE.Vector3(476.20, 17.60, 24.80),
-    new THREE.Vector3(496.50, 17.85, 14.50),
-    new THREE.Vector3(506.80, 18.15, 3.80),
-    new THREE.Vector3(495.20, 18.50, -8.50),
-    new THREE.Vector3(488.50, 18.75, -22.40),
-    new THREE.Vector3(492.50, 19.05, -34.80),
+    new THREE.Vector3(456.35, 17.54, 54.28),
+    new THREE.Vector3(480.13, 17.19, 67.71),
+    new THREE.Vector3(501.22, 17.04, 83.95),
+    new THREE.Vector3(525.49, 16.81, 88.89),
+    new THREE.Vector3(548.82, 16.65, 77.48),
+    new THREE.Vector3(560.12, 16.62, 52.18),
+    new THREE.Vector3(559.17, 16.82, 25.73),
+    new THREE.Vector3(550.14, 17.17, 1.04),
+    new THREE.Vector3(533.37, 17.83, -20.50),
+    new THREE.Vector3(512.31, 18.56, -32.31),
     new THREE.Vector3(493.00, 19.40, -44.69),
     new THREE.Vector3(471.94, 20.40, -57.60),
     new THREE.Vector3(447.16, 21.53, -69.27),
@@ -802,98 +827,7 @@
     new THREE.Vector3(227.10, 5.89, 181.80),
     new THREE.Vector3(201.98, 5.88, 181.80),
     new THREE.Vector3(177.09, 5.88, 181.80)
-                ],
-                getSpeedFactor: function(t) {
-                    if ((t > 0.13 && t < 0.18) || 
-                        (t > 0.31 && t < 0.35) || 
-                        (t > 0.39 && t < 0.44) || 
-                        (t > 0.70 && t < 0.75) || 
-                        (t > 0.77 && t < 0.82)) {
-                        return 0.60;
-                    } else if ((t >= 0.0 && t < 0.13) || 
-                               (t > 0.62 && t < 0.70) || 
-                               (t > 0.88 && t <= 1.0)) {
-                        return 1.38;
-                    }
-                    return 1.05;
-                },
-                getLineColor: function(t) {
-                    if ((t >= 0.128 && t <= 0.150) ||
-                        (t >= 0.305 && t <= 0.325) ||
-                        (t >= 0.385 && t <= 0.405) ||
-                        (t >= 0.695 && t <= 0.718)) {
-                        return new THREE.Color(0xef4444); // Merah pengereman
-                    }
-                    if ((t > 0.150 && t < 0.180) ||
-                        (t > 0.325 && t < 0.355) ||
-                        (t > 0.405 && t < 0.445) ||
-                        (t > 0.470 && t < 0.550) ||
-                        (t > 0.718 && t < 0.760) ||
-                        (t > 0.775 && t < 0.835)) {
-                        return new THREE.Color(0xfacc15); // Kuning apex
-                    }
-                    return new THREE.Color(0x22c55e); // Hijau akselerasi
-                }
-        };
-
-        // Update Document Title & HUD Info
-        document.title = `${circuitData.title} - 3D F1 Grand Prix`;
-        document.getElementById('hud-car-name').innerText = carData.name;
-        document.getElementById('hud-car-badge').style.borderColor = carData.color;
-        document.getElementById('hud-car-cat').innerText = circuitData.event;
-        document.getElementById('btn-back').href = `./index.html?model=${selectedCarKey}`;
-
-        // Setup Three.js Scene
-        const canvas = document.getElementById('webgl-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = circuitData.exposure || 1.12;
-        renderer.outputEncoding = THREE.sRGBEncoding;
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(circuitData.skyColor);
-        scene.fog = new THREE.FogExp2(circuitData.fogColor, circuitData.fogDensity);
-
-        const ambientLight = new THREE.AmbientLight(circuitData.ambientColor, circuitData.ambientIntensity);
-        scene.add(ambientLight);
-
-        const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x475569, circuitData.hemiIntensity);
-        scene.add(hemiLight);
-
-        const sunLight = new THREE.DirectionalLight(circuitData.sunColor, circuitData.sunIntensity);
-        sunLight.position.set(...circuitData.sunPos);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 10;
-        sunLight.shadow.camera.far = 1500;
-        const d = 500;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
-        sunLight.shadow.bias = -0.0001;
-        scene.add(sunLight);
-
-        const fillLight = new THREE.DirectionalLight(circuitData.fillColor, circuitData.fillIntensity);
-        fillLight.position.set(...circuitData.fillPos);
-        scene.add(fillLight);
-
-        // Kamera & Controls
-        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3500);
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2 - 0.01;
-        camera.position.set(...circuitData.cameraInit.pos);
-        controls.target.set(...circuitData.cameraInit.target);
-
-        // Kurva Sirkuit Aktif
-        const trackPoints = circuitData.points;
+];
         const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'centripetal');
 
         // ========================================================
@@ -904,10 +838,39 @@
 
         function createF1RacingLineMesh() {
             const numSamples = 800;
-            const ribbonWidth = 0.75; // Ramping, dinamis, gaya F1 Broadcast / Sim
+            const ribbonWidth = 1.35; // Lebar racing line ~1.35 meter
             const vertices = [];
             const colors = [];
             const indices = [];
+
+            // Algoritma warna F1 Racing Line dinamis:
+            // - HIJAU: Akselerasi penuh / Gas pol (Straightaway, DRS Zone, Exit)
+            // - KUNING: Transisi pengereman bertahap & Apex tikungan
+            // - MERAH: Titik pengereman keras (Heavy Braking Zone masuk tikungan)
+            function getLineColor(t) {
+                // Zona Pengereman Keras (Braking Zone)
+                // Turn 1-2 Elf: 0.128 - 0.150
+                // Turn 4 Repsol: 0.305 - 0.325
+                // Turn 5 Seat Hairpin: 0.385 - 0.405
+                // Turn 10 La Caixa: 0.695 - 0.718
+                if ((t >= 0.128 && t <= 0.150) ||
+                    (t >= 0.305 && t <= 0.325) ||
+                    (t >= 0.385 && t <= 0.405) ||
+                    (t >= 0.695 && t <= 0.718)) {
+                    return new THREE.Color(0xef4444); // Merah pengereman
+                }
+                // Zona Transisi / Apex Tikungan
+                if ((t > 0.150 && t < 0.180) ||
+                    (t > 0.325 && t < 0.355) ||
+                    (t > 0.405 && t < 0.445) ||
+                    (t > 0.470 && t < 0.550) ||
+                    (t > 0.718 && t < 0.760) ||
+                    (t > 0.775 && t < 0.835)) {
+                    return new THREE.Color(0xfacc15); // Kuning apex
+                }
+                // Jalur Akselerasi Penuh / DRS / Flat Out
+                return new THREE.Color(0x22c55e); // Hijau akselerasi
+            }
 
             for (let i = 0; i <= numSamples; i++) {
                 const t = i / numSamples;
@@ -918,13 +881,13 @@
                 const halfW = ribbonWidth / 2;
                 const pLeft = pt.clone().add(normal.clone().multiplyScalar(halfW));
                 const pRight = pt.clone().add(normal.clone().multiplyScalar(-halfW));
-                pLeft.y += 0.04;
-                pRight.y += 0.04;
+                pLeft.y += 0.08;  // Mengambang tipis 8cm di atas aspal agar tidak z-fighting
+                pRight.y += 0.08;
 
                 vertices.push(pLeft.x, pLeft.y, pLeft.z);
                 vertices.push(pRight.x, pRight.y, pRight.z);
 
-                const col = circuitData.getLineColor(t);
+                const col = getLineColor(t);
                 colors.push(col.r, col.g, col.b);
                 colors.push(col.r, col.g, col.b);
 
@@ -943,7 +906,7 @@
             const mat = new THREE.MeshBasicMaterial({
                 vertexColors: true,
                 transparent: true,
-                opacity: 0.65,
+                opacity: 0.85,
                 side: THREE.DoubleSide,
                 depthWrite: false
             });
@@ -964,10 +927,11 @@
             }
         }
 
+        // Langsung generate 3D F1 Racing Line di sirkuit
         createF1RacingLineMesh();
 
         // ========================================================
-        // 2. LOAD MODEL 3D CIRCUIT & MOBIL F1 (ASLI & DETAIL TINGGI)
+        // 2. LOAD MODEL 3D CIRCUIT DE BARCELONA-CATALUNYA & MOBIL F1
         // ========================================================
         let circuitModel = null;
         let carModel = null;
@@ -984,8 +948,6 @@
         function checkLoadComplete() {
             if (circuitLoaded && carLoaded) {
                 const loaderEl = document.getElementById('circuit-loader');
-                const titleEl = loaderEl.querySelector('.loader-title');
-                if (titleEl) titleEl.innerText = `Menyiapkan ${circuitData.title}...`;
                 loaderEl.classList.add('fade-out');
                 setTimeout(() => loaderEl.style.display = 'none', 500);
 
@@ -996,27 +958,11 @@
             }
         }
 
-        // Cek jika dibuka langsung melalui file:// protokol di browser laptop
-        const isFileProtocol = window.location.protocol === 'file:';
-        if (isFileProtocol) {
-            console.info('⚠️ Membuka via file://. Browser membatasi pemanggilan GLB besar via CORS. Menggunakan lintasan prosedural beresolusi tinggi.');
-            const banner = document.createElement('div');
-            banner.style.cssText = `
-                position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-                background: rgba(234, 179, 8, 0.92); color: #000; padding: 8px 18px;
-                border-radius: 20px; font-size: 0.78rem; font-weight: 700; z-index: 100;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.4); text-align: center; max-width: 90%;
-            `;
-            banner.innerHTML = `⚠️ Dibuka via <code>file://</code> lokal. Untuk memuat gedung & tribun 3D penuh (~54MB), gunakan <b>Live Server</b> atau buka <a href="https://muhfauzan2004.github.io/vr-n-ar/sirkuit.html" target="_blank" style="color: #000; text-decoration: underline; font-weight: 800;">GitHub Pages Resmi</a>.`;
-            document.body.appendChild(banner);
-            setTimeout(() => { if (banner) banner.style.display = 'none'; }, 9000);
-        }
-
-        // 1. Memuat Model 3D Sirkuit Barcelona-Catalunya
-        loader.load(circuitData.file, (gltf) => {
+        // 1. Memuat Model 3D Circuit de Barcelona-Catalunya (Skala Penuh 1:1 Nyata ~51.4MB)
+        loader.load('./circuit_de_catalunya.glb', (gltf) => {
             circuitModel = gltf.scene;
-            const s = circuitData.scale;
-            circuitModel.scale.set(s, s, s);
+            // Skala 100x untuk menyesuaikan koordinat asli FBX Sketchfab ke skala meter dunia nyata
+            circuitModel.scale.set(100, 100, 100);
             circuitModel.updateMatrixWorld(true);
             circuitModel.traverse((child) => {
                 if (child.isMesh) {
@@ -1030,10 +976,10 @@
         }, (xhr) => {
             if (xhr.lengthComputable && !circuitLoaded) {
                 const p = Math.round((xhr.loaded / xhr.total) * 100);
-                document.getElementById('loader-status').innerText = `Memuat Sirkuit Catalunya... ${p}%`;
+                document.getElementById('loader-status').innerText = `Memuat Circuit de Barcelona-Catalunya... ${p}%`;
             }
         }, (err) => {
-            console.warn(`Gagal memuat GLB sirkuit Catalunya:`, err);
+            console.warn('Gagal memuat sirkuit Catalunya:', err);
             circuitLoaded = true;
             checkLoadComplete();
         });
@@ -1228,29 +1174,16 @@
         }
         setupDrivingControls();
 
-        // Camera Modes: 'chase', 'tv', 'drone', 'cockpit', 'orbit'
-        const CAM_MODES = ['chase', 'tv', 'drone', 'cockpit', 'orbit'];
+        // Camera Modes: 'chase', 'drone', 'cockpit', 'orbit'
+        const CAM_MODES = ['chase', 'drone', 'cockpit', 'orbit'];
         let camIndex = 0;
         let currentCamMode = 'chase';
-
-        // 7 Menara Kamera Siaran TV F1 Catalunya (Trackside Broadcast Towers)
-        const TV_CAMERA_TOWERS = [
-            { name: 'Tower 1 - Main Straight', pos: new THREE.Vector3(180, 24, 218) },
-            { name: 'Tower 2 - Turn 1-2 Elf', pos: new THREE.Vector3(-280, 28, 145) },
-            { name: 'Tower 3 - Turn 4 Repsol', pos: new THREE.Vector3(-660, 32, -140) },
-            { name: 'Tower 4 - Turn 5 Seat Hairpin', pos: new THREE.Vector3(-275, 34, -235) },
-            { name: 'Tower 5 - Turn 9 Campsa & Back Straight', pos: new THREE.Vector3(260, 35, -100) },
-            { name: 'Tower 6 - Turn 10 La Caixa Hairpin', pos: new THREE.Vector3(535, 28, 55) },
-            { name: 'Tower 7 - Turn 14 Final Sweeper', pos: new THREE.Vector3(625, 24, 130) }
-        ];
-        let currentTvTowerIndex = 0;
 
         function cycleCamera() {
             camIndex = (camIndex + 1) % CAM_MODES.length;
             currentCamMode = CAM_MODES[camIndex];
             const labels = {
                 'chase': 'Chase Cam',
-                'tv': '📺 TV Broadcast',
                 'drone': 'Drone Cam',
                 'cockpit': 'Cockpit Cam',
                 'orbit': 'Free Orbit'
@@ -1261,8 +1194,6 @@
                 controls.enabled = true;
             } else {
                 controls.enabled = false;
-                camera.fov = 55;
-                camera.updateProjectionMatrix();
             }
         }
 
@@ -1365,8 +1296,22 @@
             const delta = clock.getDelta();
 
             if (carModel) {
-                // Kecepatan adaptif sirkuit Barcelona-Catalunya
-                let speedFactor = circuitData.getSpeedFactor(trackProgress);
+                // Kecepatan adaptif sirkuit (Sesuai Layout Resmi 14 Tikungan Spain_Circuit)
+                let speedFactor = 1.0;
+                // Tikungan tajam & zona pengereman (Turn 1-2 Elf: 0.13-0.18, Turn 4: 0.31-0.35, Turn 5 Hairpin: 0.39-0.44, Turn 10: 0.70-0.75, Stadium: 0.77-0.82)
+                if ((trackProgress > 0.13 && trackProgress < 0.18) || 
+                    (trackProgress > 0.31 && trackProgress < 0.35) || 
+                    (trackProgress > 0.39 && trackProgress < 0.44) || 
+                    (trackProgress > 0.70 && trackProgress < 0.75) || 
+                    (trackProgress > 0.77 && trackProgress < 0.82)) {
+                    speedFactor = 0.60; // Pengereman di tikungan tajam
+                } else if ((trackProgress >= 0.0 && trackProgress < 0.13) || 
+                           (trackProgress > 0.62 && trackProgress < 0.70) || 
+                           (trackProgress > 0.88 && trackProgress <= 1.0)) {
+                    speedFactor = 1.38; // Akselerasi penuh di trek lurus (Main Straight & Back Straight)
+                } else {
+                    speedFactor = 1.05;
+                }
 
                 // 1. Logika Kecepatan Berdasarkan Pedal Gas & Rem Pengguna
                 if (isGas) {
@@ -1412,44 +1357,6 @@
                 const lapMs = Math.floor((elapsedLapMs % 1000) / 10);
                 document.getElementById('lap-time').innerText = 
                     `${String(lapSec).padStart(2, '0')}:${String(lapMs).padStart(2, '0')}`;
-
-                // Sector Tracker F1 Circuit de Barcelona-Catalunya
-                let sectorText = 'S1 (Turns 1-4)';
-                let sectorColor = '#c084fc';
-                if (trackProgress < 0.28) {
-                    sectorText = 'S1 (Turns 1-4)';
-                    sectorColor = '#c084fc';
-                } else if (trackProgress < 0.65) {
-                    sectorText = 'S2 (Turns 5-9)';
-                    sectorColor = '#38bdf8';
-                } else {
-                    sectorText = 'S3 (Turns 10-14)';
-                    sectorColor = '#4ade80';
-                }
-                const secEl = document.getElementById('sector-indicator');
-                if (secEl) {
-                    secEl.innerText = sectorText;
-                    secEl.style.color = sectorColor;
-                }
-
-                // Deteksi Zona DRS Catalunya (Zona 1: Pit Straight, Zona 2: Back Straight)
-                const inDRSZone = (trackProgress >= 0.88 || trackProgress <= 0.12 || (trackProgress >= 0.60 && trackProgress <= 0.70));
-                const drsBtn = document.getElementById('drs-toggle');
-                if (drsBtn) {
-                    if (drsActive) {
-                        drsBtn.style.background = 'linear-gradient(135deg, #e11d48, #f43f5e)';
-                        drsBtn.innerText = '🔥 DRS ON (+45 KM/H)';
-                        drsBtn.style.boxShadow = '0 0 16px rgba(244, 63, 94, 0.7)';
-                    } else if (inDRSZone) {
-                        drsBtn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
-                        drsBtn.innerText = '⚡ DRS TERSEDIA';
-                        drsBtn.style.boxShadow = '0 0 14px rgba(16, 185, 129, 0.6)';
-                    } else {
-                        drsBtn.style.background = 'rgba(255, 255, 255, 0.12)';
-                        drsBtn.innerText = '⚡ DRS ZONA TUTUP';
-                        drsBtn.style.boxShadow = 'none';
-                    }
-                }
 
                 // 3. Posisi & Rotasi Mobil di Sepanjang Jalur Sirkuit dengan Offset Kemudi
                 const currentPos = trackCurve.getPointAt(trackProgress);
@@ -1506,34 +1413,13 @@
                 }
 
                 // ========================================================
-                // 4. SISTEM KAMERA INTERAKTIF (CHASE / TV BROADCAST / DRONE / COCKPIT / ORBIT)
+                // 4. SISTEM KAMERA INTERAKTIF (CHASE / DRONE / COCKPIT)
                 // ========================================================
                 if (currentCamMode === 'chase') {
                     // Kamera mengejar di belakang mobil mengikuti kemudi aktual
                     const cameraOffset = tangent.clone().multiplyScalar(-14).add(new THREE.Vector3(0, 4.8, 0));
                     camera.position.copy(actualCarPos).add(cameraOffset);
                     camera.lookAt(actualCarPos.clone().add(new THREE.Vector3(0, 1.4, 0)));
-                } else if (currentCamMode === 'tv') {
-                    // Kamera Siaran TV F1 (Pilih menara trackside terdekat dan tracking mulus)
-                    let bestTowerIdx = 0;
-                    let bestDistSq = Infinity;
-                    for (let i = 0; i < TV_CAMERA_TOWERS.length; i++) {
-                        const dSq = TV_CAMERA_TOWERS[i].pos.distanceToSquared(actualCarPos);
-                        if (dSq < bestDistSq) {
-                            bestDistSq = dSq;
-                            bestTowerIdx = i;
-                        }
-                    }
-                    currentTvTowerIndex = bestTowerIdx;
-                    const towerPos = TV_CAMERA_TOWERS[currentTvTowerIndex].pos;
-                    camera.position.lerp(towerPos, 0.12);
-                    camera.lookAt(actualCarPos.clone().add(new THREE.Vector3(0, 0.8, 0)));
-
-                    // Dynamic Telephoto Lens Zoom
-                    const dist = Math.sqrt(bestDistSq);
-                    const targetFov = THREE.MathUtils.clamp(26 + dist * 0.10, 28, 52);
-                    camera.fov += (targetFov - camera.fov) * 0.08;
-                    camera.updateProjectionMatrix();
                 } else if (currentCamMode === 'drone') {
                     // Kamera helikopter dari atas menyusuri sirkuit
                     const cameraOffset = tangent.clone().multiplyScalar(-26).add(new THREE.Vector3(0, 32, 0));
