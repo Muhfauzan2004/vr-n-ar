@@ -464,6 +464,113 @@
             font-weight: 600;
         }
 
+        /* ========================================================
+           F1 MODEL INFO CARD (YEAR & DRIVERS - F1 ONLY)
+        ======================================================== */
+        #f1-info-card {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            width: min(92vw, 410px);
+            z-index: 25;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-left: 4px solid #0284c7;
+            border-radius: 18px;
+            padding: 12px 16px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease;
+        }
+
+        #f1-info-card.show {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .f1-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            gap: 10px;
+        }
+
+        .f1-info-tag {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .f1-info-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #e2e8f0;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .f1-info-toggle:active {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .f1-info-body {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #f1-info-card.collapsed .f1-info-body {
+            display: none;
+        }
+
+        .f1-info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .f1-info-icon {
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .f1-info-label {
+            color: #94a3b8;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+        }
+
+        .f1-info-value {
+            color: #f8fafc;
+            font-weight: 700;
+            font-size: 0.84rem;
+        }
+
         /* Success Toast */
         #toast {
             position: fixed;
@@ -631,6 +738,30 @@
         </div>
     </div>
 
+    <!-- 5. F1 Vehicle Detail Card (Shown ONLY for Formula 1 Models) -->
+    <div id="f1-info-card">
+        <div class="f1-info-header" onclick="toggleF1InfoCard()">
+            <span class="f1-info-tag" id="f1-info-tag">🏎️ DETAIL MOBIL F1</span>
+            <button type="button" class="f1-info-toggle" id="f1-info-toggle-btn">Sembunyikan ▾</button>
+        </div>
+        <div class="f1-info-body">
+            <div class="f1-info-row">
+                <span class="f1-info-icon">📅</span>
+                <div>
+                    <span class="f1-info-label">Dibuat / Musim Balap</span>
+                    <span class="f1-info-value" id="f1-info-year">-</span>
+                </div>
+            </div>
+            <div class="f1-info-row">
+                <span class="f1-info-icon">👤</span>
+                <div>
+                    <span class="f1-info-label">Dikemudikan Oleh</span>
+                    <span class="f1-info-value" id="f1-info-drivers">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Camera Error Modal -->
     <div id="camera-error">
         <div class="error-card">
@@ -649,28 +780,36 @@
                 cat: 'Oracle Red Bull • Formula 1',
                 color: '#0284c7',
                 src: './redbull_RB19.glb',
-                sound: './redbull_sound.mp3'
+                sound: './redbull_sound.mp3',
+                year: '2023 (Musim Formula 1 2023)',
+                drivers: 'Max Verstappen (#1) & Sergio Pérez (#11)'
             },
             'ferrari': {
                 name: 'Ferrari F1-75',
                 cat: 'Scuderia Ferrari • Formula 1',
                 color: '#e11d48',
                 src: './ferarri_f1-75.glb',
-                sound: './ferrari_sound.mp3'
+                sound: './ferrari_sound.mp3',
+                year: '2022 (Musim Formula 1 2022)',
+                drivers: 'Charles Leclerc (#16) & Carlos Sainz Jr. (#55)'
             },
             'mercedes': {
                 name: 'Mercedes-AMG F1 W15',
                 cat: 'Mercedes-AMG PETRONAS • Formula 1',
                 color: '#00a19c',
                 src: './mercy-w15.glb',
-                sound: './mercedes_sound.mp3'
+                sound: './mercedes_sound.mp3',
+                year: '2024 (Musim Formula 1 2024)',
+                drivers: 'Lewis Hamilton (#44) & George Russell (#63)'
             },
             'astonmartin': {
                 name: 'Aston Martin AMR23',
                 cat: 'Aston Martin Aramco • Formula 1',
                 color: '#00594f',
                 src: './f1-amr23.glb',
-                sound: './astonmartin_sound.mp3'
+                sound: './astonmartin_sound.mp3',
+                year: '2023 (Musim Formula 1 2023)',
+                drivers: 'Fernando Alonso (#14) & Lance Stroll (#18)'
             },
             'ducati': {
                 name: 'Ducati Desmosedici GP',
@@ -715,6 +854,34 @@
         const mainViewer = document.getElementById('main-model-viewer');
         const modelLoader = document.getElementById('model-loader');
         const loaderText = document.getElementById('loader-text');
+        const f1InfoCard = document.getElementById('f1-info-card');
+        const f1InfoYear = document.getElementById('f1-info-year');
+        const f1InfoDrivers = document.getElementById('f1-info-drivers');
+        const f1InfoTag = document.getElementById('f1-info-tag');
+        const f1InfoToggleBtn = document.getElementById('f1-info-toggle-btn');
+
+        function updateF1InfoCard(data) {
+            if (!f1InfoCard) return;
+            if (data && data.year && data.drivers) {
+                f1InfoYear.innerText = data.year;
+                f1InfoDrivers.innerText = data.drivers;
+                f1InfoCard.style.borderLeftColor = data.color || '#0284c7';
+                if (f1InfoTag) f1InfoTag.style.color = data.color === '#00594f' ? '#2dd4bf' : (data.color || '#38bdf8');
+                f1InfoCard.classList.remove('collapsed');
+                if (f1InfoToggleBtn) f1InfoToggleBtn.innerText = 'Sembunyikan ▾';
+                f1InfoCard.classList.add('show');
+            } else {
+                f1InfoCard.classList.remove('show', 'collapsed');
+            }
+        }
+
+        function toggleF1InfoCard() {
+            if (!f1InfoCard) return;
+            const isCollapsed = f1InfoCard.classList.toggle('collapsed');
+            if (f1InfoToggleBtn) {
+                f1InfoToggleBtn.innerText = isCollapsed ? 'Lihat Detail ▴' : 'Sembunyikan ▾';
+            }
+        }
 
         const loadedModelKeys = new Set();
 
@@ -1224,6 +1391,7 @@
             // KASUS 1: Ada mobil lama yang sedang tampil -> Mobil lama melaju keluar dulu dengan suara
             if (oldKey && oldKey !== newKey && mainViewer && mainViewer.classList.contains('active')) {
                 console.log(`🚀 Model 100% siap. Mobil ${oldKey} melaju pergi...`);
+                updateF1InfoCard(null);
 
                 // BARU MAINKAN SOUND KELUAR
                 playF1EngineSound('out');
@@ -1260,11 +1428,12 @@
             playF1EngineSound('in', key);
             triggerSpeedFx();
 
-            // Perbarui Badge HUD di Atas
+            // Perbarui Badge HUD di Atas & Kartu Detail F1 (Khusus Mobil F1, bukan Ducati)
             badgeTitle.innerText = data.name;
             badgeCat.innerText = data.cat;
             modelBadge.style.borderColor = data.color;
             arUiOverlay.style.display = 'flex';
+            updateF1InfoCard(data);
 
             showToast(isSwitching ? `🔄 Ganti ke ${data.name}!` : `🏎️ ${data.name} Melaju Masuk!`);
 
@@ -1294,6 +1463,7 @@
 
             if (oldKey && mainViewer && mainViewer.classList.contains('active')) {
                 isTransitioning = true;
+                updateF1InfoCard(null);
                 playF1EngineSound('out');
                 triggerSpeedFx();
                 mainViewer.autoRotate = false;
@@ -1318,6 +1488,7 @@
                 mainViewer.classList.remove('active', 'drive-in', 'drive-out');
             }
             arUiOverlay.style.display = 'none';
+            updateF1InfoCard(null);
             scannerOverlay.style.display = 'flex';
             lastScannedText = '';
             isScanning = true;
