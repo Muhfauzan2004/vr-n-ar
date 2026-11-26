@@ -59,15 +59,29 @@
             left: 0;
             right: 0;
             z-index: 20;
-            padding: 16px 20px;
+            padding: calc(14px + env(safe-area-inset-top)) 20px 14px 20px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            gap: 12px;
             background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
             pointer-events: none;
         }
 
         .hud-top-bar > * {
+            pointer-events: auto;
+        }
+
+        .hud-top-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            flex-shrink: 0;
+            pointer-events: none;
+        }
+
+        .hud-top-left > * {
             pointer-events: auto;
         }
 
@@ -79,13 +93,14 @@
             border-radius: 25px;
             font-size: 0.85rem;
             font-weight: 700;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
             cursor: pointer;
             backdrop-filter: blur(12px);
             transition: all 0.2s;
             text-decoration: none;
+            white-space: nowrap;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
         }
 
@@ -98,10 +113,11 @@
             background: rgba(15, 23, 42, 0.9);
             border: 2px solid #0284c7;
             padding: 8px 18px;
-            border-radius: 25px;
+            border-radius: 20px;
             backdrop-filter: blur(12px);
             text-align: right;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            max-width: 340px;
         }
 
         .badge-title {
@@ -127,18 +143,36 @@
             line-height: 1.35;
         }
 
-        /* Telemetry Dashboard (Speedometer & Lap Time) */
-        .hud-bottom-bar {
+        /* Unified Bottom HUD Stack (Anti-Overlap Flex Architecture) */
+        .hud-bottom-wrapper {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            z-index: 20;
-            padding: 16px 20px 24px 20px;
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0) 100%);
+            padding: 12px 20px calc(18px + env(safe-area-inset-bottom)) 20px;
+            pointer-events: none;
+        }
+
+        .driving-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            background: linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0) 100%);
+            width: 100%;
+            pointer-events: none;
+        }
+
+        /* Telemetry Dashboard (Speedometer & Action Controls) */
+        .hud-bottom-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 12px;
             pointer-events: none;
         }
 
@@ -250,22 +284,20 @@
             to { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
         }
 
-        /* Lap Timer Badge */
+        /* Lap Timer Badge (Sits cleanly inside .hud-top-left, zero overlap) */
         .lap-badge {
-            position: fixed;
-            top: 75px;
-            left: 20px;
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 6px 14px;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 6px 13px;
             border-radius: 20px;
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #cbd5e1;
-            z-index: 15;
             backdrop-filter: blur(8px);
+            white-space: nowrap;
             pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
 
         /* Loading Screen */
@@ -279,6 +311,8 @@
             align-items: center;
             justify-content: center;
             gap: 16px;
+            padding: 20px;
+            text-align: center;
             transition: opacity 0.5s ease;
         }
 
@@ -304,20 +338,9 @@
            INTERACTIVE DRIVING CONTROLS (STEERING & PEDALS)
         ======================================================== */
         .driving-pad {
-            position: fixed;
-            bottom: 100px;
-            z-index: 30;
             display: flex;
             gap: 10px;
             pointer-events: auto;
-        }
-
-        .driving-pad.left-pad {
-            left: 20px;
-        }
-
-        .driving-pad.right-pad {
-            right: 20px;
         }
 
         .drive-btn {
@@ -382,10 +405,7 @@
 
         /* Driving Hint for Desktop Keyboard */
         .drive-hint {
-            position: fixed;
-            bottom: 74px;
-            left: 50%;
-            transform: translateX(-50%);
+            align-self: center;
             background: rgba(15, 23, 42, 0.75);
             border: 1px solid rgba(255, 255, 255, 0.15);
             padding: 4px 14px;
@@ -394,41 +414,178 @@
             font-weight: 600;
             color: #94a3b8;
             backdrop-filter: blur(8px);
-            z-index: 25;
             pointer-events: none;
             white-space: nowrap;
         }
 
         @media (max-width: 640px) {
-            .driving-pad {
-                bottom: 84px;
+            /* Top HUD: Clean 2-column layout without any overlapping */
+            .hud-top-bar {
+                padding: calc(10px + env(safe-area-inset-top)) 10px 8px 10px;
                 gap: 8px;
             }
-            .drive-btn {
-                width: 58px;
-                height: 54px;
+            .hud-top-left {
+                gap: 6px;
+            }
+            .nav-back-btn {
+                padding: 7px 11px;
+                font-size: 0.72rem;
+                border-radius: 18px;
+            }
+            .lap-badge {
+                padding: 5px 10px;
+                font-size: 0.66rem;
+                border-radius: 14px;
+            }
+            .car-badge {
+                padding: 7px 11px;
+                border-radius: 16px;
+                flex: 1;
+                min-width: 0;
+                max-width: none;
+            }
+            .badge-title {
+                font-size: 0.76rem;
+            }
+            .badge-cat {
                 font-size: 0.6rem;
+                line-height: 1.25;
             }
-            .driving-pad.left-pad { left: 12px; }
-            .driving-pad.right-pad { right: 12px; }
-            .drive-hint { display: none; }
+            .badge-f1-meta {
+                font-size: 0.58rem;
+                line-height: 1.25;
+                margin-top: 3px;
+                padding-top: 3px;
+            }
+
+            /* Bottom HUD: Unified stacked layout - Zero Overlap & Zero Cutoff */
+            .hud-bottom-wrapper {
+                gap: 8px;
+                padding: 8px 10px calc(12px + env(safe-area-inset-bottom)) 10px;
+            }
+            .driving-pad {
+                gap: 7px;
+            }
+            .drive-btn {
+                width: 56px;
+                height: 50px;
+                border-radius: 14px;
+                font-size: 0.58rem;
+                gap: 2px;
+            }
+            .drive-btn .btn-icon {
+                font-size: 1.05rem;
+            }
+            .drive-hint {
+                display: none;
+            }
             .hud-bottom-bar {
-                padding: 10px 12px 14px 12px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 7px;
             }
+            /* Compact slim horizontal speedometer strip on mobile */
             .speedo-card {
-                padding: 8px 12px;
-                min-width: 120px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 7px 12px;
+                border-radius: 14px;
+                min-width: 0;
+                gap: 10px;
+            }
+            .rpm-leds {
+                flex: 1;
+                max-width: 140px;
+                gap: 3px;
+            }
+            .rpm-dot {
+                height: 6px;
+            }
+            .speedo-content {
+                gap: 10px;
+                align-items: center;
             }
             .speedo-val {
-                font-size: 1.6rem;
+                font-size: 1.35rem;
+            }
+            .speedo-unit {
+                font-size: 0.62rem;
             }
             .gear-badge {
-                font-size: 1.1rem;
-                padding: 1px 8px;
+                font-size: 0.95rem;
+                padding: 2px 8px;
+            }
+            /* All 4 action controls fit cleanly in 1 full-width row */
+            .controls-card {
+                width: 100%;
+                display: grid;
+                grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1.3fr) auto;
+                gap: 6px;
             }
             .hud-btn {
-                padding: 8px 12px;
-                font-size: 0.75rem;
+                padding: 8px 5px;
+                font-size: 0.66rem;
+                border-radius: 14px;
+                justify-content: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                gap: 4px;
+                min-width: 0;
+            }
+            #sound-btn {
+                padding: 8px 11px;
+            }
+        }
+
+        /* Smartphone Landscape Mode */
+        @media (max-height: 500px) {
+            .hud-top-bar {
+                padding: 8px 14px;
+            }
+            .hud-top-left {
+                flex-direction: row;
+                align-items: center;
+            }
+            .car-badge {
+                padding: 5px 12px;
+                border-radius: 14px;
+            }
+            .badge-f1-meta {
+                display: none !important;
+            }
+            .hud-bottom-wrapper {
+                gap: 6px;
+                padding: 6px 14px 8px 14px;
+            }
+            .drive-btn {
+                width: 52px;
+                height: 44px;
+                font-size: 0.56rem;
+            }
+            .drive-hint {
+                display: none;
+            }
+            .hud-bottom-bar {
+                flex-direction: row;
+                align-items: flex-end;
+            }
+            .speedo-card {
+                padding: 6px 10px;
+                min-width: 115px;
+            }
+            .speedo-val {
+                font-size: 1.3rem;
+            }
+            .controls-card {
+                display: flex;
+                width: auto;
+                gap: 6px;
+            }
+            .hud-btn {
+                padding: 7px 10px;
+                font-size: 0.7rem;
             }
         }
     </style>
@@ -450,16 +607,16 @@
         </div>
     </div>
 
-    <!-- Lap Timer HUD -->
-    <div class="lap-badge">
-        ⏱️ LAP <span id="lap-counter" style="color: #38bdf8;">1</span> • <span id="lap-time" style="color: #22c55e;">00:00.00</span>
-    </div>
-
-    <!-- Top Navigation HUD -->
+    <!-- Top Navigation & Lap HUD (Anti-Overlap Flex Columns) -->
     <div class="hud-top-bar">
-        <a href="./index.html" class="nav-back-btn" id="btn-back">
-            📷 Kembali ke AR
-        </a>
+        <div class="hud-top-left">
+            <a href="./index.html" class="nav-back-btn" id="btn-back">
+                📷 Kembali ke AR
+            </a>
+            <div class="lap-badge">
+                ⏱️ LAP <span id="lap-counter" style="color: #38bdf8;">1</span> • <span id="lap-time" style="color: #22c55e;">00:00.00</span>
+            </div>
+        </div>
         <div class="car-badge" id="hud-car-badge">
             <div class="badge-title" id="hud-car-name">Red Bull RB19</div>
             <div class="badge-cat" id="hud-car-cat">Barcelona-Catalunya • Spanish F1 GP</div>
@@ -467,72 +624,76 @@
         </div>
     </div>
 
-    <!-- Interactive Driving Controls: Kemudi Belok Kiri & Kanan (Left Pad) -->
-    <div class="driving-pad left-pad" id="steering-controls">
-        <button class="drive-btn steer-btn" id="btn-steer-left" title="Belok Kiri (A / Panah Kiri)">
-            <span class="btn-icon">◀</span>
-            <span>KIRI</span>
-        </button>
-        <button class="drive-btn steer-btn" id="btn-steer-right" title="Belok Kanan (D / Panah Kanan)">
-            <span class="btn-icon">▶</span>
-            <span>KANAN</span>
-        </button>
-    </div>
-
-    <!-- Interactive Driving Controls: Pedal Gas & Rem (Right Pad) -->
-    <div class="driving-pad right-pad" id="pedal-controls">
-        <button class="drive-btn brake-btn" id="btn-brake" title="Rem (S / Panah Bawah)">
-            <span class="btn-icon">🛑</span>
-            <span>REM</span>
-        </button>
-        <button class="drive-btn gas-btn" id="btn-gas" title="Gas (W / Panah Atas)">
-            <span class="btn-icon">⚡</span>
-            <span>GAS</span>
-        </button>
-    </div>
-
-    <!-- Keyboard Driving Hint (Desktop) -->
-    <div class="drive-hint">
-        🎮 <b>Kemudi:</b> W/A/S/D atau Panah Keyboard • Spasi: DRS
-    </div>
-
-    <!-- Bottom Telemetry HUD -->
-    <div class="hud-bottom-bar">
-        <!-- Speedometer & Tachometer -->
-        <div class="speedo-card">
-            <div class="rpm-leds" id="rpm-bar">
-                <div class="rpm-dot green"></div>
-                <div class="rpm-dot green"></div>
-                <div class="rpm-dot green"></div>
-                <div class="rpm-dot red"></div>
-                <div class="rpm-dot red"></div>
-                <div class="rpm-dot red"></div>
-                <div class="rpm-dot blue"></div>
-                <div class="rpm-dot blue"></div>
+    <!-- Unified Bottom HUD Wrapper (Driving Pads + Telemetry + Controls) -->
+    <div class="hud-bottom-wrapper">
+        <!-- Interactive Driving Controls: Steering (Left) & Pedals (Right) -->
+        <div class="driving-row">
+            <div class="driving-pad left-pad" id="steering-controls">
+                <button class="drive-btn steer-btn" id="btn-steer-left" title="Belok Kiri (A / Panah Kiri)">
+                    <span class="btn-icon">◀</span>
+                    <span>KIRI</span>
+                </button>
+                <button class="drive-btn steer-btn" id="btn-steer-right" title="Belok Kanan (D / Panah Kanan)">
+                    <span class="btn-icon">▶</span>
+                    <span>KANAN</span>
+                </button>
             </div>
-            <div class="speedo-content">
-                <div>
-                    <span class="speedo-val" id="speedo-number">0</span>
-                    <span class="speedo-unit">KM/H</span>
-                </div>
-                <div class="gear-badge" id="gear-indicator">1</div>
+
+            <!-- Keyboard Driving Hint (Desktop Only) -->
+            <div class="drive-hint">
+                🎮 <b>Kemudi:</b> W/A/S/D atau Panah Keyboard • Spasi: DRS
+            </div>
+
+            <div class="driving-pad right-pad" id="pedal-controls">
+                <button class="drive-btn brake-btn" id="btn-brake" title="Rem (S / Panah Bawah)">
+                    <span class="btn-icon">🛑</span>
+                    <span>REM</span>
+                </button>
+                <button class="drive-btn gas-btn" id="btn-gas" title="Gas (W / Panah Atas)">
+                    <span class="btn-icon">⚡</span>
+                    <span>GAS</span>
+                </button>
             </div>
         </div>
 
-        <!-- Camera & DRS Controls -->
-        <div class="controls-card">
-            <button class="hud-btn drs-btn" id="drs-toggle" onclick="toggleDRS()">
-                ⚡ DRS BOOST
-            </button>
-            <button class="hud-btn" id="racing-line-btn" onclick="toggleRacingLine()" style="background: rgba(34, 197, 94, 0.3); border: 1px solid rgba(34, 197, 94, 0.6);" title="Toggle 3D F1 Racing Line">
-                🏁 Line
-            </button>
-            <button class="hud-btn" onclick="cycleCamera()">
-                🎥 <span id="cam-label">Chase Cam</span>
-            </button>
-            <button class="hud-btn" id="sound-btn" onclick="toggleSound()">
-                🔊
-            </button>
+        <!-- Bottom Telemetry & Action Bar -->
+        <div class="hud-bottom-bar">
+            <!-- Speedometer & Tachometer -->
+            <div class="speedo-card">
+                <div class="rpm-leds" id="rpm-bar">
+                    <div class="rpm-dot green"></div>
+                    <div class="rpm-dot green"></div>
+                    <div class="rpm-dot green"></div>
+                    <div class="rpm-dot red"></div>
+                    <div class="rpm-dot red"></div>
+                    <div class="rpm-dot red"></div>
+                    <div class="rpm-dot blue"></div>
+                    <div class="rpm-dot blue"></div>
+                </div>
+                <div class="speedo-content">
+                    <div>
+                        <span class="speedo-val" id="speedo-number">0</span>
+                        <span class="speedo-unit">KM/H</span>
+                    </div>
+                    <div class="gear-badge" id="gear-indicator">1</div>
+                </div>
+            </div>
+
+            <!-- Camera & DRS Controls -->
+            <div class="controls-card">
+                <button class="hud-btn drs-btn" id="drs-toggle" onclick="toggleDRS()">
+                    ⚡ DRS BOOST
+                </button>
+                <button class="hud-btn" id="racing-line-btn" onclick="toggleRacingLine()" style="background: rgba(34, 197, 94, 0.3); border: 1px solid rgba(34, 197, 94, 0.6);" title="Toggle 3D F1 Racing Line">
+                    🏁 Line
+                </button>
+                <button class="hud-btn" onclick="cycleCamera()">
+                    🎥 <span id="cam-label">Chase Cam</span>
+                </button>
+                <button class="hud-btn" id="sound-btn" onclick="toggleSound()">
+                    🔊
+                </button>
+            </div>
         </div>
     </div>
 
