@@ -765,20 +765,14 @@
         if (!VEHICLES[selectedCarKey]) selectedCarKey = 'redbull';
         const carData = VEHICLES[selectedCarKey];
 
-        // Update HUD Info
+        // Update HUD Info (Detail spesifikasi F1 hanya ditampilkan di halaman AR, tidak di sirkuit)
         document.getElementById('hud-car-name').innerText = carData.name;
         document.getElementById('hud-car-badge').style.borderColor = carData.color;
         document.getElementById('btn-back').href = `./index.html?model=${selectedCarKey}`;
 
-        // Tampilkan detail tahun & pembalap khusus model F1 (tidak untuk Ducati)
         const hudF1Meta = document.getElementById('hud-car-f1-meta');
         if (hudF1Meta) {
-            if (carData.year && carData.drivers) {
-                hudF1Meta.innerText = `📅 Dibuat ${carData.year} • 👤 ${carData.drivers}`;
-                hudF1Meta.style.display = 'block';
-            } else {
-                hudF1Meta.style.display = 'none';
-            }
+            hudF1Meta.style.display = 'none';
         }
 
         // Setup Three.js Scene

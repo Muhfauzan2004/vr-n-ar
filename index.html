@@ -465,22 +465,22 @@
         }
 
         /* ========================================================
-           F1 MODEL INFO CARD (YEAR & DRIVERS - F1 ONLY)
+           F1 MODEL INFO CARD (FULL SPECS & FACTS - F1 AR VIEW ONLY)
         ======================================================== */
         #f1-info-card {
             position: fixed;
-            bottom: 20px;
+            bottom: calc(14px + env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%) translateY(20px);
-            width: min(92vw, 410px);
+            width: min(94vw, 430px);
             z-index: 25;
-            background: rgba(15, 23, 42, 0.88);
+            background: rgba(15, 23, 42, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.16);
             border-left: 4px solid #0284c7;
             border-radius: 18px;
-            padding: 12px 16px;
+            padding: 12px 15px;
             backdrop-filter: blur(14px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
             visibility: hidden;
             opacity: 0;
             pointer-events: none;
@@ -504,7 +504,7 @@
 
         .f1-info-tag {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 800;
             letter-spacing: 0.8px;
             color: #38bdf8;
@@ -514,19 +514,20 @@
         }
 
         .f1-info-toggle {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
             color: #e2e8f0;
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             font-weight: 700;
-            padding: 3px 9px;
+            padding: 4px 10px;
             border-radius: 12px;
             cursor: pointer;
             transition: background 0.2s;
+            white-space: nowrap;
         }
 
         .f1-info-toggle:active {
-            background: rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.24);
         }
 
         .f1-info-body {
@@ -536,30 +537,68 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            max-height: 42vh;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        .f1-info-body::-webkit-scrollbar {
+            width: 4px;
+        }
+        .f1-info-body::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.35);
+            border-radius: 4px;
         }
 
         #f1-info-card.collapsed .f1-info-body {
             display: none;
         }
 
+        .f1-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 2px;
+        }
+
+        .f1-stat-pill {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 7px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .f1-stat-pill .f1-info-label {
+            font-size: 0.62rem;
+        }
+
+        .f1-stat-pill .f1-info-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: #38bdf8;
+        }
+
         .f1-info-row {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
-            font-size: 0.8rem;
-            line-height: 1.4;
+            gap: 9px;
+            font-size: 0.78rem;
+            line-height: 1.38;
         }
 
         .f1-info-icon {
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             flex-shrink: 0;
             margin-top: 1px;
         }
 
         .f1-info-label {
             color: #94a3b8;
-            font-size: 0.7rem;
-            font-weight: 600;
+            font-size: 0.64rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             display: block;
@@ -567,8 +606,29 @@
 
         .f1-info-value {
             color: #f8fafc;
-            font-weight: 700;
-            font-size: 0.84rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: block;
+        }
+
+        .f1-fact-box {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 12px;
+            padding: 8px 10px;
+            margin-top: 2px;
+            font-size: 0.75rem;
+            line-height: 1.45;
+            color: #e2e8f0;
+        }
+
+        .f1-fact-box strong {
+            color: #38bdf8;
+            display: block;
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
         }
 
         /* Success Toast */
@@ -738,13 +798,23 @@
         </div>
     </div>
 
-    <!-- 5. F1 Vehicle Detail Card (Shown ONLY for Formula 1 Models) -->
+    <!-- 5. F1 Vehicle Detail Card (Shown ONLY when F1 3D Model is Active in AR) -->
     <div id="f1-info-card">
         <div class="f1-info-header" onclick="toggleF1InfoCard()">
-            <span class="f1-info-tag" id="f1-info-tag">🏎️ DETAIL MOBIL F1</span>
+            <span class="f1-info-tag" id="f1-info-tag">🏎️ SPESIFIKASI &amp; FAKTA F1</span>
             <button type="button" class="f1-info-toggle" id="f1-info-toggle-btn">Sembunyikan ▾</button>
         </div>
         <div class="f1-info-body">
+            <div class="f1-stats-grid">
+                <div class="f1-stat-pill">
+                    <span class="f1-info-label">⚡ Tenaga Mesin</span>
+                    <span class="f1-info-value" id="f1-info-hp">-</span>
+                </div>
+                <div class="f1-stat-pill">
+                    <span class="f1-info-label">🚀 Top Speed</span>
+                    <span class="f1-info-value" id="f1-info-topspeed">-</span>
+                </div>
+            </div>
             <div class="f1-info-row">
                 <span class="f1-info-icon">📅</span>
                 <div>
@@ -758,6 +828,24 @@
                     <span class="f1-info-label">Dikemudikan Oleh</span>
                     <span class="f1-info-value" id="f1-info-drivers">-</span>
                 </div>
+            </div>
+            <div class="f1-info-row">
+                <span class="f1-info-icon">⚙️</span>
+                <div>
+                    <span class="f1-info-label">Tipe Mesin &amp; Transmisi</span>
+                    <span class="f1-info-value" id="f1-info-engine">-</span>
+                </div>
+            </div>
+            <div class="f1-info-row">
+                <span class="f1-info-icon">🏆</span>
+                <div>
+                    <span class="f1-info-label">Prestasi / Gelar Juara</span>
+                    <span class="f1-info-value" id="f1-info-championship">-</span>
+                </div>
+            </div>
+            <div class="f1-fact-box">
+                <strong>💡 Fakta Menarik</strong>
+                <span id="f1-info-fact">-</span>
             </div>
         </div>
     </div>
@@ -782,7 +870,12 @@
                 src: './redbull_RB19.glb',
                 sound: './redbull_sound.mp3',
                 year: '2023 (Musim Formula 1 2023)',
-                drivers: 'Max Verstappen (#1) & Sergio Pérez (#11)'
+                drivers: 'Max Verstappen (#1) & Sergio Pérez (#11)',
+                hp: '~1.000+ HP',
+                topSpeed: '~355 km/jam',
+                engine: 'Honda RBPTH001 • 1.6L V6 Turbo Hybrid (8-Speed Semi-Otomatis)',
+                championship: 'Juara Dunia Pembalap & Konstruktor F1 2023 (21 menang dari 22 seri • Rekor 95,5% kemenangan)',
+                fact: 'Dirancang oleh Adrian Newey, RB19 tercatat sebagai mobil F1 paling dominan sepanjang sejarah — mencetak 15 kemenangan beruntun dan 19 kemenangan Max Verstappen dalam satu musim.'
             },
             'ferrari': {
                 name: 'Ferrari F1-75',
@@ -791,7 +884,12 @@
                 src: './ferarri_f1-75.glb',
                 sound: './ferrari_sound.mp3',
                 year: '2022 (Musim Formula 1 2022)',
-                drivers: 'Charles Leclerc (#16) & Carlos Sainz Jr. (#55)'
+                drivers: 'Charles Leclerc (#16) & Carlos Sainz Jr. (#55)',
+                hp: '~1.000 HP',
+                topSpeed: '~350 km/jam',
+                engine: 'Ferrari 066/7 • 1.6L V6 Turbo Hybrid (8-Speed Semi-Otomatis)',
+                championship: 'Runner-Up Konstruktor & Pembalap F1 2022 (4 Kemenangan GP, 12 Pole Position, 20 Podium)',
+                fact: 'Dinamai F1-75 untuk merayakan 75 tahun mobil produksi pertama Ferrari (1947). Terkenal dengan desain sidepod "bathtub" yang agresif dan kecepatan kualifikasi paling kencang di musim 2022.'
             },
             'mercedes': {
                 name: 'Mercedes-AMG F1 W15',
@@ -800,7 +898,12 @@
                 src: './mercy-w15.glb',
                 sound: './mercedes_sound.mp3',
                 year: '2024 (Musim Formula 1 2024)',
-                drivers: 'Lewis Hamilton (#44) & George Russell (#63)'
+                drivers: 'Lewis Hamilton (#44) & George Russell (#63)',
+                hp: '~1.000+ HP',
+                topSpeed: '~352 km/jam',
+                engine: 'Mercedes-AMG F1 M15 E Performance • 1.6L V6 Turbo Hybrid (8-Speed)',
+                championship: '4 Kemenangan GP Musim F1 2024 (Austria, Inggris/Silverstone, Belgia, Las Vegas) • P4 Konstruktor',
+                fact: 'Mobil terakhir Lewis Hamilton bersama Mercedes sebelum pindah ke Ferrari. Mencetak rekor 9 kemenangan Hamilton di kandangnya Silverstone serta finis dominan 1–2 di GP Las Vegas 2024.'
             },
             'astonmartin': {
                 name: 'Aston Martin AMR23',
@@ -809,7 +912,12 @@
                 src: './f1-amr23.glb',
                 sound: './astonmartin_sound.mp3',
                 year: '2023 (Musim Formula 1 2023)',
-                drivers: 'Fernando Alonso (#14) & Lance Stroll (#18)'
+                drivers: 'Fernando Alonso (#14) & Lance Stroll (#18)',
+                hp: '~1.000 HP',
+                topSpeed: '~348 km/jam',
+                engine: 'Mercedes-AMG F1 M14 E Performance • 1.6L V6 Turbo Hybrid (8-Speed)',
+                championship: '8 Podium di Musim F1 2023 (2x P2 & 6x P3 oleh Fernando Alonso) • P5 Konstruktor (280 Poin)',
+                fact: 'Menjadi kejutan terbesar F1 2023 setelah melesat dari papan tengah ke barisan podium sejak seri pembuka di Bahrain dan mengantar Fernando Alonso meraih podium ke-100 sepanjang kariernya.'
             },
             'ducati': {
                 name: 'Ducati Desmosedici GP',
@@ -855,16 +963,26 @@
         const modelLoader = document.getElementById('model-loader');
         const loaderText = document.getElementById('loader-text');
         const f1InfoCard = document.getElementById('f1-info-card');
+        const f1InfoHp = document.getElementById('f1-info-hp');
+        const f1InfoTopSpeed = document.getElementById('f1-info-topspeed');
         const f1InfoYear = document.getElementById('f1-info-year');
         const f1InfoDrivers = document.getElementById('f1-info-drivers');
+        const f1InfoEngine = document.getElementById('f1-info-engine');
+        const f1InfoChampionship = document.getElementById('f1-info-championship');
+        const f1InfoFact = document.getElementById('f1-info-fact');
         const f1InfoTag = document.getElementById('f1-info-tag');
         const f1InfoToggleBtn = document.getElementById('f1-info-toggle-btn');
 
         function updateF1InfoCard(data) {
             if (!f1InfoCard) return;
             if (data && data.year && data.drivers) {
-                f1InfoYear.innerText = data.year;
-                f1InfoDrivers.innerText = data.drivers;
+                if (f1InfoHp) f1InfoHp.innerText = data.hp || '-';
+                if (f1InfoTopSpeed) f1InfoTopSpeed.innerText = data.topSpeed || '-';
+                if (f1InfoYear) f1InfoYear.innerText = data.year;
+                if (f1InfoDrivers) f1InfoDrivers.innerText = data.drivers;
+                if (f1InfoEngine) f1InfoEngine.innerText = data.engine || '-';
+                if (f1InfoChampionship) f1InfoChampionship.innerText = data.championship || '-';
+                if (f1InfoFact) f1InfoFact.innerText = data.fact || '-';
                 f1InfoCard.style.borderLeftColor = data.color || '#0284c7';
                 if (f1InfoTag) f1InfoTag.style.color = data.color === '#00594f' ? '#2dd4bf' : (data.color || '#38bdf8');
                 f1InfoCard.classList.remove('collapsed');
@@ -1538,3 +1656,4 @@
 </body>
 
 </html>
+
