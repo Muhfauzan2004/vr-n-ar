@@ -1,0 +1,570 @@
+:root {
+    --f1-red: #e10600;
+    --f1-cyan: #38bdf8;
+    --f1-dark: #0f172a;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #090d16;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #fff;
+}
+
+#webgl-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+}
+
+/* ========================================================
+   HUD & OVERLAYS
+======================================================== */
+.hud-top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    padding: calc(14px + env(safe-area-inset-top)) 20px 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
+    pointer-events: none;
+}
+
+.hud-top-bar > * {
+    pointer-events: auto;
+}
+
+.hud-top-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+.hud-top-left > * {
+    pointer-events: auto;
+}
+
+.nav-back-btn {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 9px 16px;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    transition: all 0.2s;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.nav-back-btn:active {
+    transform: scale(0.95);
+    background: #e11d48;
+}
+
+.car-badge {
+    background: rgba(15, 23, 42, 0.9);
+    border: 2px solid #0284c7;
+    padding: 8px 18px;
+    border-radius: 20px;
+    backdrop-filter: blur(12px);
+    text-align: right;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    max-width: 340px;
+}
+
+.badge-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.badge-cat {
+    font-size: 0.7rem;
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+.badge-f1-meta {
+    font-size: 0.68rem;
+    color: #e2e8f0;
+    font-weight: 600;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    line-height: 1.35;
+}
+
+/* Unified Bottom HUD Stack (Anti-Overlap Flex Architecture) */
+.hud-bottom-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0) 100%);
+    padding: 12px 20px calc(18px + env(safe-area-inset-bottom)) 20px;
+    pointer-events: none;
+}
+
+.driving-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    pointer-events: none;
+}
+
+/* Telemetry Dashboard (Speedometer & Action Controls) */
+.hud-bottom-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.hud-bottom-bar > * {
+    pointer-events: auto;
+}
+
+/* Speedometer Card */
+.speedo-card {
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 20px;
+    padding: 12px 18px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+    min-width: 150px;
+}
+
+.rpm-leds {
+    display: flex;
+    gap: 3px;
+    width: 100%;
+}
+
+.rpm-dot {
+    flex: 1;
+    height: 5px;
+    border-radius: 3px;
+    background: #334155;
+    transition: background 0.08s;
+}
+
+.rpm-dot.green.active { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.rpm-dot.red.active { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+.rpm-dot.blue.active { background: #3b82f6; box-shadow: 0 0 8px #60a5fa; }
+
+.speedo-content {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.speedo-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.1rem;
+    font-weight: 900;
+    color: #f8fafc;
+    line-height: 1;
+}
+
+.speedo-unit {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-left: 4px;
+}
+
+.gear-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #eab308;
+    background: rgba(234, 179, 8, 0.15);
+    padding: 2px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+/* Action Controls Buttons (Bottom Right) */
+.controls-card {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.hud-btn {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    transition: all 0.15s;
+}
+
+.hud-btn:active {
+    transform: scale(0.92);
+}
+
+.hud-btn.drs-btn {
+    background: linear-gradient(135deg, #059669, #10b981);
+    border: none;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+    animation: pulseDRS 1.5s infinite alternate;
+}
+
+@keyframes pulseDRS {
+    from { box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+    to { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+}
+
+/* Lap Timer Badge (Sits cleanly inside .hud-top-left, zero overlap) */
+.lap-badge {
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 6px 13px;
+    border-radius: 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Loading Screen */
+#circuit-loader {
+    position: fixed;
+    inset: 0;
+    background: #090d16;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    text-align: center;
+    transition: opacity 0.5s ease;
+}
+
+#circuit-loader.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loader-spin {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #38bdf8;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================================
+   INTERACTIVE DRIVING CONTROLS (STEERING & PEDALS)
+======================================================== */
+.driving-pad {
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.drive-btn {
+    background: rgba(15, 23, 42, 0.85);
+    border: 2px solid rgba(56, 189, 248, 0.35);
+    color: #f8fafc;
+    width: 66px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 800;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: all 0.1s ease;
+}
+
+.drive-btn .btn-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.drive-btn:active, .drive-btn.active {
+    transform: scale(0.92);
+}
+
+/* Steering Buttons (Cyan accent) */
+.drive-btn.steer-btn:active, .drive-btn.steer-btn.active {
+    background: rgba(2, 132, 199, 0.85);
+    border-color: #38bdf8;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.7);
+}
+
+/* Gas Pedal (Green accent) */
+.drive-btn.gas-btn {
+    border-color: rgba(34, 197, 94, 0.5);
+}
+.drive-btn.gas-btn:active, .drive-btn.gas-btn.active {
+    background: rgba(22, 163, 74, 0.9);
+    border-color: #22c55e;
+    box-shadow: 0 0 22px rgba(34, 197, 94, 0.8);
+}
+
+/* Brake Pedal (Red accent) */
+.drive-btn.brake-btn {
+    border-color: rgba(239, 68, 68, 0.5);
+}
+.drive-btn.brake-btn:active, .drive-btn.brake-btn.active {
+    background: rgba(220, 38, 38, 0.9);
+    border-color: #ef4444;
+    box-shadow: 0 0 22px rgba(239, 68, 68, 0.8);
+}
+
+/* Driving Hint for Desktop Keyboard */
+.drive-hint {
+    align-self: center;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 4px 14px;
+    border-radius: 15px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #94a3b8;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    /* Top HUD: Clean 2-column layout without any overlapping */
+    .hud-top-bar {
+        padding: calc(10px + env(safe-area-inset-top)) 10px 8px 10px;
+        gap: 8px;
+    }
+    .hud-top-left {
+        gap: 6px;
+    }
+    .nav-back-btn {
+        padding: 7px 11px;
+        font-size: 0.72rem;
+        border-radius: 18px;
+    }
+    .lap-badge {
+        padding: 5px 10px;
+        font-size: 0.66rem;
+        border-radius: 14px;
+    }
+    .car-badge {
+        padding: 7px 11px;
+        border-radius: 16px;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+    }
+    .badge-title {
+        font-size: 0.76rem;
+    }
+    .badge-cat {
+        font-size: 0.6rem;
+        line-height: 1.25;
+    }
+    .badge-f1-meta {
+        font-size: 0.58rem;
+        line-height: 1.25;
+        margin-top: 3px;
+        padding-top: 3px;
+    }
+
+    /* Bottom HUD: Unified stacked layout - Zero Overlap & Zero Cutoff */
+    .hud-bottom-wrapper {
+        gap: 8px;
+        padding: 8px 10px calc(12px + env(safe-area-inset-bottom)) 10px;
+    }
+    .driving-pad {
+        gap: 7px;
+    }
+    .drive-btn {
+        width: 56px;
+        height: 50px;
+        border-radius: 14px;
+        font-size: 0.58rem;
+        gap: 2px;
+    }
+    .drive-btn .btn-icon {
+        font-size: 1.05rem;
+    }
+    .drive-hint {
+        display: none;
+    }
+    .hud-bottom-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 7px;
+    }
+    /* Compact slim horizontal speedometer strip on mobile */
+    .speedo-card {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 12px;
+        border-radius: 14px;
+        min-width: 0;
+        gap: 10px;
+    }
+    .rpm-leds {
+        flex: 1;
+        max-width: 140px;
+        gap: 3px;
+    }
+    .rpm-dot {
+        height: 6px;
+    }
+    .speedo-content {
+        gap: 10px;
+        align-items: center;
+    }
+    .speedo-val {
+        font-size: 1.35rem;
+    }
+    .speedo-unit {
+        font-size: 0.62rem;
+    }
+    .gear-badge {
+        font-size: 0.95rem;
+        padding: 2px 8px;
+    }
+    /* All 4 action controls fit cleanly in 1 full-width row */
+    .controls-card {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1.3fr) auto;
+        gap: 6px;
+    }
+    .hud-btn {
+        padding: 8px 5px;
+        font-size: 0.66rem;
+        border-radius: 14px;
+        justify-content: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        gap: 4px;
+        min-width: 0;
+    }
+    #sound-btn {
+        padding: 8px 11px;
+    }
+}
+
+/* Smartphone Landscape Mode */
+@media (max-height: 500px) {
+    .hud-top-bar {
+        padding: 8px 14px;
+    }
+    .hud-top-left {
+        flex-direction: row;
+        align-items: center;
+    }
+    .car-badge {
+        padding: 5px 12px;
+        border-radius: 14px;
+    }
+    .badge-f1-meta {
+        display: none !important;
+    }
+    .hud-bottom-wrapper {
+        gap: 6px;
+        padding: 6px 14px 8px 14px;
+    }
+    .drive-btn {
+        width: 52px;
+        height: 44px;
+        font-size: 0.56rem;
+    }
+    .drive-hint {
+        display: none;
+    }
+    .hud-bottom-bar {
+        flex-direction: row;
+        align-items: flex-end;
+    }
+    .speedo-card {
+        padding: 6px 10px;
+        min-width: 115px;
+    }
+    .speedo-val {
+        font-size: 1.3rem;
+    }
+    .controls-card {
+        display: flex;
+        width: auto;
+        gap: 6px;
+    }
+    .hud-btn {
+        padding: 7px 10px;
+        font-size: 0.7rem;
+    }
+}

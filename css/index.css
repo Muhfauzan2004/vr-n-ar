@@ -1,0 +1,680 @@
+:root {
+    --accent-cyan: #38bdf8;
+    --accent-redbull: #0284c7;
+    --accent-ferrari: #e11d48;
+    --accent-mercedes: #00a19c;
+    --accent-astonmartin: #00594f;
+    --accent-ducati: #f59e0b;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #fff;
+    user-select: none;
+}
+
+/* ========================================================
+   1. FULLSCREEN LIVE CAMERA BACKGROUND (ALWAYS ACTIVE)
+======================================================== */
+#camera-video {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    background: #000;
+}
+
+#scan-canvas {
+    display: none;
+}
+
+/* ========================================================
+   2. PRELOADED TRANSPARENT 3D MODEL VIEWERS (0MS INSTANT)
+======================================================== */
+.ar-model-viewer {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    background: transparent !important;
+    --poster-color: transparent !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    outline: none;
+    will-change: transform, opacity, filter;
+    transition: opacity 0.25s ease;
+}
+
+.ar-model-viewer.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* ========================================================
+   LOADING PROGRESS INDICATOR UNTUK 3D MODEL
+======================================================== */
+.model-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 16px 26px;
+    border-radius: 20px;
+    backdrop-filter: blur(12px);
+    z-index: 15;
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    transition: opacity 0.25s ease;
+}
+
+.model-loader.show {
+    display: flex;
+}
+
+.loader-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #38bdf8;
+    border-radius: 50%;
+    animation: spinLoader 0.75s linear infinite;
+}
+
+@keyframes spinLoader {
+    to { transform: rotate(360deg); }
+}
+
+#loader-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: 0.5px;
+}
+
+/* ========================================================
+   ANIMASI MOBIL F1: MELAJU MASUK & MELAJU PERGI
+======================================================== */
+/* Animasi Mobil Melaju Masuk (Datang dari kejauhan melaju ke depan) */
+.ar-model-viewer.drive-in {
+    opacity: 1 !important;
+    visibility: visible !important;
+    animation: carDriveIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Animasi Mobil Melaju Pergi (Gas pol melesat ke depan keluar layar) */
+.ar-model-viewer.drive-out {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: none !important;
+    animation: carDriveOut 0.48s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+}
+
+@keyframes carDriveIn {
+    0% {
+        opacity: 0;
+        transform: perspective(900px) translate3d(0, 110px, -800px) scale(0.12);
+        filter: blur(8px);
+    }
+    45% {
+        opacity: 0.95;
+        filter: blur(2px);
+    }
+    85% {
+        transform: perspective(900px) translate3d(0, -12px, 30px) scale(1.04);
+        filter: blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: perspective(900px) translate3d(0, 0, 0) scale(1);
+        filter: blur(0);
+    }
+}
+
+@keyframes carDriveOut {
+    0% {
+        opacity: 1;
+        transform: perspective(900px) translate3d(0, 0, 0) scale(1);
+        filter: blur(0);
+    }
+    25% {
+        /* Hentakan throttle sebelum melesat */
+        transform: perspective(900px) translate3d(0, 14px, -35px) scale(0.95);
+    }
+    100% {
+        opacity: 0;
+        /* Melaju kencang ke depan melewati kamera layar */
+        transform: perspective(900px) translate3d(0, -90px, 600px) scale(2.4);
+        filter: blur(10px);
+    }
+}
+
+/* Efek Getaran Kamera / Screen Rumble */
+@keyframes screenRumble {
+    0% { transform: translate(0, 0); }
+    20% { transform: translate(-3px, 3px); }
+    40% { transform: translate(3px, -2px); }
+    60% { transform: translate(-2px, -2px); }
+    80% { transform: translate(2px, 2px); }
+    100% { transform: translate(0, 0); }
+}
+
+body.rumble {
+    animation: screenRumble 0.38s ease-out;
+}
+
+/* Efek Garis Kecepatan Balapan (Speed Lines Effect) */
+.speed-fx {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.4) 100%);
+    transition: opacity 0.15s ease;
+}
+
+.speed-fx.active {
+    opacity: 1;
+    animation: speedRumble 0.65s ease-out forwards;
+}
+
+.speed-line {
+    position: absolute;
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+    width: 2px;
+    height: 140px;
+    border-radius: 2px;
+    opacity: 0.75;
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+}
+.sl-1 { top: 10%; left: 14%; height: 160px; transform: rotate(-15deg); }
+.sl-2 { top: 15%; right: 16%; height: 140px; transform: rotate(18deg); }
+.sl-3 { bottom: 12%; left: 20%; height: 180px; transform: rotate(10deg); }
+.sl-4 { bottom: 15%; right: 18%; height: 150px; transform: rotate(-12deg); }
+.sl-5 { top: 38%; left: 8%; height: 210px; transform: rotate(-5deg); }
+.sl-6 { top: 40%; right: 9%; height: 220px; transform: rotate(8deg); }
+
+@keyframes speedRumble {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.02) translate(-2px, 2px); }
+    50% { transform: scale(0.99) translate(2px, -1px); }
+    75% { transform: scale(1.01) translate(-1px, 1px); }
+    100% { transform: scale(1) translate(0, 0); opacity: 0; }
+}
+
+/* ========================================================
+   3. SCANNER VIEWFINDER RETICLE (WHEN WAITING FOR SCAN)
+======================================================== */
+#scanner-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.scanner-top-bar {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+    pointer-events: auto;
+}
+
+.app-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 16px;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+}
+
+.app-badge span {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #f8fafc;
+}
+
+.cam-switch-btn {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s;
+}
+
+.cam-switch-btn:active {
+    transform: scale(0.9);
+}
+
+/* Center Viewfinder Target */
+.reticle-container {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    border-radius: 24px;
+    box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.corner {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border: 4px solid var(--accent-cyan);
+    transition: all 0.2s ease;
+}
+.top-left { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 20px 0 0 0; }
+.top-right { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 20px 0 0; }
+.bottom-left { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 20px; }
+.bottom-right { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 20px 0; }
+
+/* Reticle Feedback Hijau Terkunci Saat QR Terbaca */
+.reticle-container.locked {
+    box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.6);
+}
+.reticle-container.locked .corner {
+    border-color: #22c55e !important;
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.85);
+    transform: scale(0.92);
+}
+.reticle-container.locked .laser-line {
+    background: linear-gradient(90deg, transparent, #22c55e, #4ade80, #22c55e, transparent) !important;
+    box-shadow: 0 0 18px #22c55e !important;
+}
+
+.laser-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #38bdf8, #0284c7, #38bdf8, transparent);
+    box-shadow: 0 0 15px #38bdf8;
+    animation: laserScan 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes laserScan {
+    0% { top: 8%; opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { top: 92%; opacity: 0.3; }
+}
+
+.scanner-instruction {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #f8fafc;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    margin-top: 20px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+    animation: pulseText 2s ease-in-out infinite;
+}
+
+@keyframes pulseText {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.02); opacity: 1; }
+}
+
+.scanner-footer-hint {
+    padding: 24px;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    text-align: center;
+    background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+    width: 100%;
+}
+
+/* ========================================================
+   4. TOP BAR WHEN MODEL IS ACTIVE (CLEAN VIEW - NO BOTTOM BUTTONS)
+======================================================== */
+#ar-ui-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 25;
+    display: none;
+    padding: 18px 20px;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%);
+    pointer-events: none;
+}
+
+#ar-ui-overlay > * {
+    pointer-events: auto;
+}
+
+.reset-scan-btn {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s;
+}
+
+.reset-scan-btn:active {
+    transform: scale(0.94);
+    background: #e11d48;
+}
+
+.active-model-badge {
+    background: rgba(15, 23, 42, 0.9);
+    border: 2px solid #22c55e;
+    padding: 8px 18px;
+    border-radius: 25px;
+    backdrop-filter: blur(12px);
+    text-align: right;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.badge-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.badge-category {
+    font-size: 0.7rem;
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+/* ========================================================
+   F1 MODEL INFO CARD (FULL SPECS & FACTS - F1 AR VIEW ONLY)
+======================================================== */
+#f1-info-card {
+    position: fixed;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    width: min(94vw, 430px);
+    z-index: 25;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-left: 4px solid #0284c7;
+    border-radius: 18px;
+    padding: 12px 15px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease;
+}
+
+#f1-info-card.show {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.f1-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    gap: 10px;
+}
+
+.f1-info-tag {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.f1-info-toggle {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #e2e8f0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.f1-info-toggle:active {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+.f1-info-body {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 42vh;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.f1-info-body::-webkit-scrollbar {
+    width: 4px;
+}
+.f1-info-body::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 4px;
+}
+
+#f1-info-card.collapsed .f1-info-body {
+    display: none;
+}
+
+.f1-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.f1-stat-pill {
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 7px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.f1-stat-pill .f1-info-label {
+    font-size: 0.62rem;
+}
+
+.f1-stat-pill .f1-info-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    color: #38bdf8;
+}
+
+.f1-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 0.78rem;
+    line-height: 1.38;
+}
+
+.f1-info-icon {
+    font-size: 0.92rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.f1-info-label {
+    color: #94a3b8;
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+}
+
+.f1-info-value {
+    color: #f8fafc;
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: block;
+}
+
+.f1-fact-box {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 12px;
+    padding: 8px 10px;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: #e2e8f0;
+}
+
+.f1-fact-box strong {
+    color: #38bdf8;
+    display: block;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+/* Success Toast */
+#toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: #22c55e;
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(34, 197, 94, 0.5);
+    transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Camera Error Modal */
+#camera-error {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 200;
+    backdrop-filter: blur(8px);
+}
+
+.error-card {
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 24px 20px;
+    max-width: 340px;
+    text-align: center;
+}
+
+.error-card h3 {
+    margin: 0 0 10px 0;
+    color: #f87171;
+    font-size: 1.1rem;
+}
+
+.error-card p {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    margin: 0 0 18px 0;
+    line-height: 1.5;
+}
+
+.error-btn {
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+}
