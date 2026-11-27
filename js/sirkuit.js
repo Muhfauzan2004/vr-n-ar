@@ -946,7 +946,25 @@
                 }
             }
 
-            // Langkah 5: Pasang 4 Pivot Group roda tepat pada as lokal root dengan sumbu putar eksak anti-goyang
+            // Langkah 5: Pasang 4 Pivot Group roda tepat pada as lokal root + auto-simetri lateral
+            let topMinLat = Infinity, topMaxLat = -Infinity;
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const pos = meshes[mi].geometry.attributes.position;
+                const m2r = meshToRoots[mi];
+                for (let i = 0; i < pos.count; i++) {
+                    v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+                    if (v.y >= min.y + 0.68 * size.y) {
+                        const lat = longIsZ ? v.x : v.z;
+                        if (lat < topMinLat) topMinLat = lat;
+                        if (lat > topMaxLat) topMaxLat = lat;
+                    }
+                }
+            }
+            const chassisMidLat = (Number.isFinite(topMinLat) && Number.isFinite(topMaxLat))
+                ? (topMinLat + topMaxLat) * 0.5
+                : midLat;
+
+            const zonePivots = new Map();
             for (const z of validZones) {
                 if (z.trisByMat.size === 0) continue;
                 const pivot = new THREE.Group();
@@ -970,7 +988,25 @@
                 });
 
                 root.add(pivot);
+                zonePivots.set(z.qi, { z, pivot });
                 wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', dir: 1 });
+            }
+
+            const latAxis = longIsZ ? 'x' : 'z';
+            for (const [qL, qR] of [[0, 1], [2, 3]]) {
+                const left = zonePivots.get(qL);
+                const right = zonePivots.get(qR);
+                if (!left || !right) continue;
+                const distL = Math.abs(left.z.cLat - chassisMidLat);
+                const distR = Math.abs(right.z.cLat - chassisMidLat);
+                const diff = Math.abs(distL - distR);
+                if (diff > 0.002 * W && diff < 0.045 * W) {
+                    if (distL > distR) {
+                        left.pivot.position[latAxis] = chassisMidLat + Math.sign(left.z.cLat - chassisMidLat) * distR;
+                    } else {
+                        right.pivot.position[latAxis] = chassisMidLat + Math.sign(right.z.cLat - chassisMidLat) * distL;
+                    }
+                }
             }
 
             return wheels;

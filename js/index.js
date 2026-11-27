@@ -687,7 +687,27 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         }
     }
 
-    // Langkah 7: Pasang 4 Pivot Group roda tepat di as roda lokal root dengan sumbu putar eksak anti-goyang
+    // Langkah 7: Pasang 4 Pivot Group roda tepat di as roda lokal root (skala 1:1)
+    // + Auto-simetri lateral: jika salah satu ban (mis. kiri depan AMR23) lebih keluar dari sisi seberangnya,
+    // rapatkan ban yang lebih keluar ke jarak simetris terhadap garis tengah sasis!
+    let topMinLat = Infinity, topMaxLat = -Infinity;
+    for (let mi = 0; mi < meshes.length; mi++) {
+        const pos = meshes[mi].geometry.attributes.position;
+        const m2r = meshToRoots[mi];
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+            if (v.y >= minY + 0.68 * sizeY) {
+                const lat = longIsZ ? v.x : v.z;
+                if (lat < topMinLat) topMinLat = lat;
+                if (lat > topMaxLat) topMaxLat = lat;
+            }
+        }
+    }
+    const chassisMidLat = (Number.isFinite(topMinLat) && Number.isFinite(topMaxLat))
+        ? (topMinLat + topMaxLat) * 0.5
+        : midLat;
+
+    const zonePivots = new Map();
     for (const z of validZones) {
         if (z.trisByMat.size === 0) continue;
         const pivot = new GroupCtor();
@@ -711,7 +731,26 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         });
 
         root.add(pivot);
+        zonePivots.set(z.qi, { z, pivot });
         wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', dir: 1 });
+    }
+
+    // Rapatkan pasangan roda kiri-kanan (belakang: 0&1, depan: 2&3) jika ada celah asimetris pada model asli
+    const latAxis = longIsZ ? 'x' : 'z';
+    for (const [qL, qR] of [[0, 1], [2, 3]]) {
+        const left = zonePivots.get(qL);
+        const right = zonePivots.get(qR);
+        if (!left || !right) continue;
+        const distL = Math.abs(left.z.cLat - chassisMidLat);
+        const distR = Math.abs(right.z.cLat - chassisMidLat);
+        const diff = Math.abs(distL - distR);
+        if (diff > 0.002 * W && diff < 0.045 * W) {
+            if (distL > distR) {
+                left.pivot.position[latAxis] = chassisMidLat + Math.sign(left.z.cLat - chassisMidLat) * distR;
+            } else {
+                right.pivot.position[latAxis] = chassisMidLat + Math.sign(right.z.cLat - chassisMidLat) * distL;
+            }
+        }
     }
 
     return wheels;
