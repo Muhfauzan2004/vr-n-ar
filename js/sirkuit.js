@@ -576,7 +576,7 @@
             const midLong = longIsZ ? center.z : center.x;
 
             // Langkah 2: Deteksi eksak 4 tapak ban paling bawah yang menyentuh aspal
-            // Langkah 2: Deteksi tepat 4 roda HANYA dari pita dinding samping luar ban (|dLat| >= 0.42*W, y di 30%-65% tinggi)
+            // Langkah 2: Deteksi tepat 4 roda HANYA dari pita dinding luar bagian ATAS ban (|dLat| >= 0.42*W, y di 42%-62% tinggi)
             const quads = [
                 { side: -1, end: -1, minLng: Infinity, maxLng: -Infinity, count: 0 },
                 { side:  1, end: -1, minLng: Infinity, maxLng: -Infinity, count: 0 },
@@ -590,7 +590,7 @@
                 for (let i = 0; i < pos.count; i++) {
                     v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
                     const relY = (v.y - min.y) / size.y;
-                    if (relY < 0.30 || relY > 0.65) continue;
+                    if (relY < 0.42 || relY > 0.62) continue;
                     const lat = longIsZ ? v.x : v.z;
                     const lng = longIsZ ? v.z : v.x;
                     const dLat = lat - midLat;
@@ -608,21 +608,19 @@
             const validZones = [];
             for (const q of quads) {
                 if (q.count < 10) continue;
-                const rawCLng = (q.minLng + q.maxLng) * 0.5;
-                const rawR = Math.max((q.maxLng - q.minLng) * 0.5, 0.04 * L);
+                const cLng = (q.minLng + q.maxLng) * 0.5;
                 validZones.push({
                     side: q.side,
-                    rawCLng,
-                    rawR,
+                    cLng,
                     wMinY: Infinity, wMaxY: -Infinity,
-                    wMinLng: Infinity, wMaxLng: -Infinity,
                     innerAbsLat: Infinity, outerAbsLat: -Infinity,
                     trisByMat: new Map()
                 });
             }
             if (validZones.length === 0) return wheels;
 
-            // Langkah 3A: Ukur batas vertikal & longitudinal eksak tiap ban di sisi luarnya
+            // Langkah 3A: Ukur tinggi & jari-jari eksak tiap ban HANYA pada kolom sempit tepat di as roda
+            const axleColHalf = 0.04 * L;
             for (let mi = 0; mi < meshes.length; mi++) {
                 const pos = meshes[mi].geometry.attributes.position;
                 const m2r = meshToRoots[mi];
@@ -634,21 +632,17 @@
                     const dLat = lat - midLat;
                     if (Math.abs(dLat) < 0.40 * W) continue;
                     for (const z of validZones) {
-                        if (z.side * dLat > 0 && Math.abs(lng - z.rawCLng) <= z.rawR * 1.15) {
+                        if (z.side * dLat > 0 && Math.abs(lng - z.cLng) <= axleColHalf) {
                             if (v.y < z.wMinY) z.wMinY = v.y;
                             if (v.y > z.wMaxY) z.wMaxY = v.y;
-                            if (lng < z.wMinLng) z.wMinLng = lng;
-                            if (lng > z.wMaxLng) z.wMaxLng = lng;
                         }
                     }
                 }
             }
 
             validZones.forEach((z) => {
-                z.cLng = (z.wMinLng + z.wMaxLng) * 0.5;
                 const radY = (z.wMaxY - z.wMinY) * 0.5;
-                const radL = (z.wMaxLng - z.wMinLng) * 0.5;
-                z.exactR = Math.max(radY, radL, z.rawR);
+                z.exactR = Math.max(radY, 0.04 * L);
                 z.cY = (z.wMinY + z.wMaxY) * 0.5;
             });
 
