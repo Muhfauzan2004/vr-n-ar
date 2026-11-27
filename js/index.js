@@ -322,7 +322,7 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         if (ra !== rb) parent[rb] = ra;
     }
 
-    const qScale = 3800 / maxDim;
+    const qScale = 12000 / maxDim;
     const posMap = new Map();
     for (let mi = 0; mi < meshes.length; mi++) {
         const pos = meshes[mi].geometry.attributes.position;
@@ -333,7 +333,7 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
             const ix = Math.round((v.x - carMin.x) * qScale);
             const iy = Math.round((v.y - carMin.y) * qScale);
             const iz = Math.round((v.z - carMin.z) * qScale);
-            const key = ix * 16777216 + iy * 4096 + iz;
+            const key = ix * 268435456 + iy * 16384 + iz;
             const prev = posMap.get(key);
             const gid = off + i;
             if (prev === undefined) {
@@ -402,25 +402,23 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
     }
 
     // Langkah 4: Pilih tepat 4 komponen BAN UTAMA (1 per kuadran FL/FR/RL/RR)
-    // Syarat ban F1 sejati: lingkaran sempurna (sizeY ≈ sizeLng), diameter ~10%-18% panjang mobil,
-    // menyentuh lantai (minY dekat carMin.y), dan berada di sisi paling luar mobil (|outerLat| >= 0.44*W)
     const quadBest = [null, null, null, null];
     compStats.forEach((st) => {
-        if (st.triCount < 60) return;
+        if (st.triCount < 35) return;
         const sY = st.maxY - st.minY;
         const sLng = st.maxLng - st.minLng;
         const sLat = st.maxLat - st.minLat;
-        if (sY < 0.08 * L || sY > 0.20 * L) return;
+        if (sY < 0.065 * L || sY > 0.22 * L) return;
         const aspect = sY / Math.max(sLng, 1e-5);
-        if (aspect < 0.85 || aspect > 1.18) return;
-        if (sLat < 0.07 * W || sLat > 0.28 * W) return;
-        if (st.minY > minY + 0.08 * sizeY) return;
+        if (aspect < 0.78 || aspect > 1.28) return;
+        if (sLat < 0.04 * W || sLat > 0.30 * W) return;
+        if (st.minY > minY + 0.12 * sizeY) return;
         const cLat = (st.minLat + st.maxLat) * 0.5;
         const cLng = (st.minLng + st.maxLng) * 0.5;
         const dLat = cLat - midLat;
         const dLng = cLng - midLong;
         const outerAbs = Math.max(Math.abs(st.minLat - midLat), Math.abs(st.maxLat - midLat));
-        if (outerAbs < 0.43 * W) return;
+        if (outerAbs < 0.41 * W) return;
 
         const qIdx = (dLng >= 0 ? 2 : 0) + (dLat >= 0 ? 1 : 0);
         if (!quadBest[qIdx] || st.triCount > quadBest[qIdx].triCount) {
@@ -430,6 +428,8 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
 
     const validZones = [];
     const compToZone = new Map();
+    const quadToZone = [null, null, null, null];
+
     for (let qi = 0; qi < 4; qi++) {
         const tire = quadBest[qi];
         if (!tire) continue;
@@ -439,25 +439,169 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         const r = Math.max((tire.maxY - tire.minY) * 0.5, (tire.maxLng - tire.minLng) * 0.5);
         const zIdx = validZones.length;
         const zone = {
+            qi,
+            isMirrorFallback: false,
+            tireCid: tire.cid,
             side: (cLat >= midLat) ? 1 : -1,
             center: longIsZ ? new Vec3(cLat, cY, cLng) : new Vec3(cLng, cY, cLat),
             cLat, cY, cLng, r,
             minLat: tire.minLat, maxLat: tire.maxLat,
             minY: tire.minY, maxY: tire.maxY,
             minLng: tire.minLng, maxLng: tire.maxLng,
+            axisVec: longIsZ ? new Vec3(1, 0, 0) : new Vec3(0, 0, 1),
             trisByMat: new Map()
         };
         validZones.push(zone);
+        quadToZone[qi] = zone;
         compToZone.set(tire.cid, zIdx);
     }
 
+    // Jika 1 dari 4 kuadran tidak terdeteksi sebagai komponen terpisah (mis. menempel 1 vertex ke hub di AMR23),
+    // cerminkan geometri eksak dari ban sisi seberangnya (kiri <-> kanan) agar keempat roda selalu berputar!
+    for (let qi = 0; qi < 4; qi++) {
+        if (quadToZone[qi]) continue;
+        const opp = quadToZone[qi ^ 1];
+        if (!opp) continue;
+        const mSide = -opp.side;
+        const mCLat = 2 * midLat - opp.cLat;
+        const mMinLat = 2 * midLat - opp.maxLat;
+        const mMaxLat = 2 * midLat - opp.minLat;
+        const zone = {
+            qi,
+            isMirrorFallback: true,
+            tireCid: -1,
+            side: mSide,
+            center: longIsZ ? new Vec3(mCLat, opp.cY, opp.cLng) : new Vec3(opp.cLng, opp.cY, mCLat),
+            cLat: mCLat, cY: opp.cY, cLng: opp.cLng, r: opp.r,
+            minLat: mMinLat, maxLat: mMaxLat,
+            minY: opp.minY, maxY: opp.maxY,
+            minLng: opp.minLng, maxLng: opp.maxLng,
+            axisVec: longIsZ ? new Vec3(1, 0, 0) : new Vec3(0, 0, 1),
+            trisByMat: new Map()
+        };
+        validZones.push(zone);
+        quadToZone[qi] = zone;
+    }
+
+    // Langkah 4B: Presisi anti-goyang (Kåsa Circle Fit + 3x3 Covariance Axle Vector) untuk tiap ban
+    // Menghilangkan goyangan akibat camber, toe-in, flat-spot tapak ban, atau kemiringan model!
+    const canonicalAxis = longIsZ ? new Vec3(1, 0, 0) : new Vec3(0, 0, 1);
+    const tireVertsByZone = validZones.map(() => []);
+    for (let mi = 0; mi < meshes.length; mi++) {
+        const pos = meshes[mi].geometry.attributes.position;
+        const m2r = meshToRoots[mi];
+        const off = meshOffsets[mi];
+        for (let i = 0; i < pos.count; i++) {
+            const zIdx = compToZone.get(find(off + i));
+            if (zIdx !== undefined) {
+                v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+                tireVertsByZone[zIdx].push(v.x, v.y, v.z);
+            }
+        }
+    }
+
+    for (let zi = 0; zi < validZones.length; zi++) {
+        const z = validZones[zi];
+        const pts = tireVertsByZone[zi];
+        const n = Math.floor(pts.length / 3);
+        if (n < 30) continue;
+
+        // 1. Kåsa Circle Fit pada ring terluar ban (jarak >= 65% radius) -> pusat (cY, cLng) eksak sub-milimeter!
+        let sumU = 0, sumW = 0, cnt = 0;
+        const ringU = [], ringW = [];
+        const rMinSq = (z.r * 0.65) * (z.r * 0.65);
+        for (let i = 0; i < n; i++) {
+            const px = pts[i * 3], py = pts[i * 3 + 1], pz = pts[i * 3 + 2];
+            const lng = longIsZ ? pz : px;
+            const du = py - z.cY;
+            const dw = lng - z.cLng;
+            if (du * du + dw * dw >= rMinSq) {
+                ringU.push(py);
+                ringW.push(lng);
+                sumU += py;
+                sumW += lng;
+                cnt++;
+            }
+        }
+        if (cnt >= 24) {
+            const mu = sumU / cnt;
+            const mw = sumW / cnt;
+            let a11 = 0, a12 = 0, a22 = 0, b1 = 0, b2 = 0;
+            for (let i = 0; i < cnt; i++) {
+                const u = ringU[i] - mu;
+                const w = ringW[i] - mw;
+                const r2 = u * u + w * w;
+                a11 += u * u;
+                a12 += u * w;
+                a22 += w * w;
+                b1 += u * r2;
+                b2 += w * r2;
+            }
+            const det = a11 * a22 - a12 * a12;
+            if (Math.abs(det) > 1e-12) {
+                const fitY = mu + (0.5 * (b1 * a22 - b2 * a12)) / det;
+                const fitLng = mw + (0.5 * (a11 * b2 - a12 * b1)) / det;
+                if (Math.hypot(fitY - z.cY, fitLng - z.cLng) < 0.25 * z.r) {
+                    z.cY = fitY;
+                    z.cLng = fitLng;
+                    z.center = longIsZ ? new Vec3(z.cLat, z.cY, z.cLng) : new Vec3(z.cLng, z.cY, z.cLat);
+                }
+            }
+        }
+
+        // 2. Eigenvector terkecil dari kovarians 3x3 (via Power Iteration pada trace*I - C) -> arah as roda eksak!
+        let cxx = 0, cyy = 0, czz = 0, cxy = 0, cxz = 0, cyz = 0;
+        for (let i = 0; i < n; i++) {
+            const dx = pts[i * 3] - z.center.x;
+            const dy = pts[i * 3 + 1] - z.center.y;
+            const dz = pts[i * 3 + 2] - z.center.z;
+            cxx += dx * dx; cyy += dy * dy; czz += dz * dz;
+            cxy += dx * dy; cxz += dx * dz; cyz += dy * dz;
+        }
+        const tr = cxx + cyy + czz;
+        if (tr > 1e-10) {
+            const m00 = tr - cxx, m11 = tr - cyy, m22 = tr - czz;
+            const m01 = -cxy, m02 = -cxz, m12 = -cyz;
+            let ax = canonicalAxis.x, ay = canonicalAxis.y, az = canonicalAxis.z;
+            for (let it = 0; it < 14; it++) {
+                const nx = m00 * ax + m01 * ay + m02 * az;
+                const ny = m01 * ax + m11 * ay + m12 * az;
+                const nz = m02 * ax + m12 * ay + m22 * az;
+                const len = Math.hypot(nx, ny, nz);
+                if (len < 1e-12) break;
+                ax = nx / len; ay = ny / len; az = nz / len;
+            }
+            const dot = ax * canonicalAxis.x + ay * canonicalAxis.y + az * canonicalAxis.z;
+            if (dot < 0) { ax = -ax; ay = -ay; az = -az; }
+            if (Math.abs(dot) >= 0.94) {
+                z.axisVec = new Vec3(ax, ay, az);
+            }
+        }
+    }
+
+    // Jika ada kuadran mirror-fallback, ikutkan arah as cermin dari sisi seberang
+    for (const z of validZones) {
+        if (!z.isMirrorFallback) continue;
+        const opp = quadToZone[z.qi ^ 1];
+        if (opp && opp.axisVec) {
+            z.cY = opp.cY;
+            z.cLng = opp.cLng;
+            z.center = longIsZ ? new Vec3(z.cLat, z.cY, z.cLng) : new Vec3(z.cLng, z.cY, z.cLat);
+            // Cerminkan sudut camber/toe secara simetris
+            z.axisVec = longIsZ
+                ? new Vec3(opp.axisVec.x, -opp.axisVec.y, -opp.axisVec.z)
+                : new Vec3(-opp.axisVec.x, -opp.axisVec.y, opp.axisVec.z);
+            z.axisVec.normalize();
+        }
+    }
+
     // Langkah 5: Gabungkan komponen velg / wheel cover / logo Pirelli yang berada 100% DI DALAM kotak ban
-    // (Wheel brow di atas ban & suspensi di dalam sasis otomatis TERKECUALI karena keluar dari batas ban!)
     if (validZones.length > 0) {
         compStats.forEach((st) => {
             if (compToZone.has(st.cid)) return;
             for (let zi = 0; zi < validZones.length; zi++) {
                 const z = validZones[zi];
+                if (z.isMirrorFallback) continue;
                 const tolR = z.r * 0.025;
                 const tolLatIn = 0.004 * W;
                 const tolLatOut = 0.015 * W;
@@ -475,6 +619,29 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
     }
 
     if (validZones.length === 0) return wheels;
+
+    const mirrorZones = validZones
+        .map((z, idx) => ({ z, idx }))
+        .filter((item) => item.z.isMirrorFallback);
+
+    function classifyMirrorPoint(pt) {
+        const lat = longIsZ ? pt.x : pt.z;
+        const lng = longIsZ ? pt.z : pt.x;
+        for (let i = 0; i < mirrorZones.length; i++) {
+            const { z, idx } = mirrorZones[i];
+            const tolLatIn = 0.003 * W;
+            const tolLatOut = 0.015 * W;
+            const inLat = z.side > 0
+                ? (lat >= z.minLat + tolLatIn && lat <= z.maxLat + tolLatOut)
+                : (lat >= z.minLat - tolLatOut && lat <= z.maxLat - tolLatIn);
+            if (!inLat) continue;
+            const dY = pt.y - z.cY;
+            const dLng = lng - z.cLng;
+            const maxR = z.r * 1.025;
+            if (dY * dY + dLng * dLng <= maxR * maxR) return idx;
+        }
+        return -1;
+    }
 
     const v0 = new Vec3(), v1 = new Vec3(), v2 = new Vec3();
     const n0 = new Vec3();
@@ -499,13 +666,28 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
             const i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
             const i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
 
-            const zIdx = compToZone.get(find(off + i0));
-            if (zIdx !== undefined) {
-                movedAny = true;
-                const z = validZones[zIdx];
+            let zIdx = compToZone.get(find(off + i0));
+            let vertsLoaded = false;
+
+            if (zIdx === undefined && mirrorZones.length > 0) {
                 v0.fromBufferAttribute(pos, i0).applyMatrix4(m2r);
                 v1.fromBufferAttribute(pos, i1).applyMatrix4(m2r);
                 v2.fromBufferAttribute(pos, i2).applyMatrix4(m2r);
+                vertsLoaded = true;
+                const m0 = classifyMirrorPoint(v0);
+                if (m0 >= 0 && classifyMirrorPoint(v1) === m0 && classifyMirrorPoint(v2) === m0) {
+                    zIdx = m0;
+                }
+            }
+
+            if (zIdx !== undefined) {
+                movedAny = true;
+                const z = validZones[zIdx];
+                if (!vertsLoaded) {
+                    v0.fromBufferAttribute(pos, i0).applyMatrix4(m2r);
+                    v1.fromBufferAttribute(pos, i1).applyMatrix4(m2r);
+                    v2.fromBufferAttribute(pos, i2).applyMatrix4(m2r);
+                }
 
                 let bucket = z.trisByMat.get(mesh.material);
                 if (!bucket) {
@@ -538,7 +720,7 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         }
     }
 
-    // Langkah 7: Pasang 4 Pivot Group roda tepat di as roda lokal root (skala 1:1)
+    // Langkah 7: Pasang 4 Pivot Group roda tepat di as roda lokal root dengan sumbu putar eksak anti-goyang
     for (const z of validZones) {
         if (z.trisByMat.size === 0) continue;
         const pivot = new GroupCtor();
@@ -562,7 +744,7 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         });
 
         root.add(pivot);
-        wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', dir: 1 });
+        wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', axisVec: z.axisVec, dir: 1 });
     }
 
     return wheels;
@@ -627,7 +809,11 @@ function setupARWheelSpin() {
                 const spinStep = dt * 11.5; // Putaran roda stabil seperti mobil melaju
                 for (let i = 0; i < arWheelPivots.length; i++) {
                     const w = arWheelPivots[i];
-                    w.pivot.rotation[w.axis] += spinStep * w.dir;
+                    if (w.axisVec && typeof w.pivot.rotateOnAxis === 'function') {
+                        w.pivot.rotateOnAxis(w.axisVec, spinStep * w.dir);
+                    } else {
+                        w.pivot.rotation[w.axis] += spinStep * w.dir;
+                    }
                 }
                 if (typeof arWheelScene.queueRender === 'function') {
                     arWheelScene.queueRender();
