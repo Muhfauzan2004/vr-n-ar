@@ -9,7 +9,9 @@
     <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&display=swap"
+        rel="stylesheet">
 
     <!-- PWA & Mobile WebApp Optimization -->
     <link rel="manifest" href="./manifest.json">
@@ -52,15 +54,8 @@
     <canvas id="scan-canvas"></canvas>
 
     <!-- 2. Single Dynamic Transparent 3D Model Viewer (Super Lightweight & Low VRAM) -->
-    <model-viewer id="main-model-viewer"
-        class="ar-model-viewer"
-        camera-controls
-        auto-rotate
-        rotation-per-second="25deg"
-        shadow-intensity="1.6"
-        shadow-softness="0.7"
-        exposure="1.0"
-        interaction-prompt="none">
+    <model-viewer id="main-model-viewer" class="ar-model-viewer" camera-controls auto-rotate rotation-per-second="25deg"
+        shadow-intensity="1.6" shadow-softness="0.7" exposure="1.0" interaction-prompt="none">
     </model-viewer>
 
     <!-- Sleek 3D Loading Spinner HUD -->
@@ -76,8 +71,10 @@
                 <span>📷 AR SCANNER 3D</span>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
-                <button id="torch-btn" class="cam-switch-btn" onclick="toggleTorch()" title="Senter / Flashlight" style="display: none;">🔦</button>
-                <button class="sound-toggle-btn cam-switch-btn" onclick="toggleSound()" title="Aktif/Bisu Suara F1">🔊</button>
+                <button id="torch-btn" class="cam-switch-btn" onclick="toggleTorch()" title="Senter / Flashlight"
+                    style="display: none;">🔦</button>
+                <button class="sound-toggle-btn cam-switch-btn" onclick="toggleSound()"
+                    title="Aktif/Bisu Suara F1">🔊</button>
                 <button class="cam-switch-btn" onclick="switchCamera()" title="Ganti Kamera">🔄</button>
             </div>
         </div>
@@ -96,7 +93,8 @@
         </div>
 
         <div class="scanner-footer-hint">
-            Scan QR Red Bull, Ferrari, Mercedes W15, Aston Martin AMR23, atau Ducati untuk memunculkan model 3D di kamera ini
+            Scan QR Red Bull, Ferrari, Mercedes W15, Aston Martin AMR23, atau Ducati untuk memunculkan model 3D di
+            kamera ini
         </div>
     </div>
 
@@ -106,10 +104,12 @@
             <button class="reset-scan-btn" onclick="resetToScanner()">
                 🔍 Scan Lain
             </button>
-            <button class="reset-scan-btn" onclick="goToCircuit()" style="background: linear-gradient(135deg, #0284c7, #38bdf8); border: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.5);">
+            <button class="reset-scan-btn" onclick="goToCircuit()"
+                style="background: linear-gradient(135deg, #0284c7, #38bdf8); border: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.5);">
                 🏁 Masuk Sirkuit
             </button>
-            <button class="sound-toggle-btn cam-switch-btn" onclick="toggleSound()" title="Aktif/Bisu Suara F1" style="width: 38px; height: 38px;">🔊</button>
+            <button class="sound-toggle-btn cam-switch-btn" onclick="toggleSound()" title="Aktif/Bisu Suara F1"
+                style="width: 38px; height: 38px;">🔊</button>
         </div>
         <div class="active-model-badge" id="model-badge">
             <div class="badge-title" id="badge-title">Red Bull RB19</div>
@@ -181,16 +181,19 @@
     <div id="camera-permission-screen">
         <div class="cam-perm-card">
             <div class="cam-perm-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                     <circle cx="12" cy="13" r="4"></circle>
                 </svg>
             </div>
-            <h2>AR Racing 3D Explorer</h2>
-            <p id="camera-perm-desc">Aplikasi ini memerlukan akses ke kamera perangkat Anda untuk memindai marker atau QR code dan memunculkan mobil balap 3D di dunia nyata.</p>
+            <h2>AR FORMULA 1 3D Explorer</h2>
+            <p id="camera-perm-desc">Aplikasi ini memerlukan akses ke kamera perangkat Anda untuk memindai marker atau
+                QR code dan memunculkan mobil balap 3D di dunia nyata.</p>
             <p id="camera-perm-note" class="cam-perm-note"></p>
             <button type="button" class="cam-perm-btn" id="btn-start-camera" onclick="requestCameraAndStart()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
                     <polygon points="6 4 20 12 6 20 6 4"></polygon>
                 </svg>
                 <span>Nyalakan Kamera &amp; Mulai AR</span>
@@ -204,4 +207,3 @@
 </body>
 
 </html>
-
