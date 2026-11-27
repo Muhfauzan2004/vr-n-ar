@@ -1,7 +1,9 @@
-# Local temporary files
+# Local temporary & tooling files
 .vscode/
 .idea/
 *.log
+node_modules/
+scratch/
 
 # Keep only active compressed GLBs
 *_original.glb

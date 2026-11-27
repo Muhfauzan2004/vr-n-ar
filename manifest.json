@@ -9,7 +9,7 @@
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "./qr_redbull.png",
+      "src": "./assets/qr/qr_redbull.png",
       "sizes": "400x400",
       "type": "image/png",
       "purpose": "any maskable"
