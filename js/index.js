@@ -990,6 +990,7 @@ async function startCamera() {
         await video.play();
 
         hideCameraPermissionScreen();
+        try { localStorage.setItem('webar_camera_granted', '1'); } catch (e) {}
 
         // Cek ketersediaan tombol lampu senter / torch
         checkTorchSupport();
@@ -999,6 +1000,7 @@ async function startCamera() {
         return true;
     } catch (err) {
         console.warn('Camera error:', err);
+        try { localStorage.removeItem('webar_camera_granted'); } catch (e) {}
         showCameraPermissionScreen('Akses kamera belum diizinkan. Mohon izinkan kamera pada browser Anda lalu tekan tombol di bawah.');
         return false;
     }
@@ -1300,19 +1302,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     const matchedKey = resolveModelKey(rawParam);
 
     // Cek status izin kamera terlebih dahulu:
-    // Jika sudah pernah diizinkan -> langsung nyalakan kamera.
+    // Jika sudah pernah diizinkan (via Permissions API atau localStorage) -> langsung nyalakan kamera tanpa memunculkan layar izin!
     // Jika belum dapat akses kamera -> tampilkan layar izin kamera AR Explorer.
-    let alreadyGranted = false;
+    let permState = 'unknown';
     if (navigator.permissions && navigator.permissions.query) {
         try {
             const status = await navigator.permissions.query({ name: 'camera' });
-            alreadyGranted = (status.state === 'granted');
+            permState = status.state;
         } catch (e) {
-            alreadyGranted = false;
+            permState = 'unknown';
         }
     }
 
+    let storedGranted = false;
+    try { storedGranted = localStorage.getItem('webar_camera_granted') === '1'; } catch (e) {}
+
+    const alreadyGranted = (permState === 'granted') || (storedGranted && permState !== 'denied');
+
     if (alreadyGranted) {
+        hideCameraPermissionScreen();
         await startCamera();
     } else {
         showCameraPermissionScreen();
