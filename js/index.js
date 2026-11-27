@@ -370,7 +370,8 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         z.cY = (z.wMinY + z.wMaxY) * 0.5;
     });
 
-    // Langkah 3B: Ukur lebar eksak tiap ban dari mahkota atas ban (terisolasi di udara bebas, jauh dari lantai/wishbone)
+    // Langkah 3B: Ukur lebar eksak tiap ban dari tapak BAWAH ban tepat di bawah as roda
+    // (bebas dari spoiler/wheel brow di atas ban depan, wishbone di tengah, maupun lantai sasis!)
     for (let mi = 0; mi < meshes.length; mi++) {
         const pos = meshes[mi].geometry.attributes.position;
         const m2r = meshToRoots[mi];
@@ -380,12 +381,12 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
             const lng = longIsZ ? v.z : v.x;
             const dLat = lat - midLat;
             const absLat = Math.abs(dLat);
-            if (absLat < 0.27 * W) continue;
+            if (absLat < 0.28 * W) continue;
             for (const z of validZones) {
                 if (z.side * dLat > 0 &&
-                    Math.abs(lng - z.cLng) <= 0.55 * z.exactR &&
-                    v.y >= z.cY + 0.55 * z.exactR &&
-                    v.y <= z.cY + 1.05 * z.exactR) {
+                    Math.abs(lng - z.cLng) <= 0.45 * z.exactR &&
+                    v.y >= z.wMinY - 0.02 * z.exactR &&
+                    v.y <= z.wMinY + 0.16 * z.exactR) {
                     if (absLat < z.innerAbsLat) z.innerAbsLat = absLat;
                     if (absLat > z.outerAbsLat) z.outerAbsLat = absLat;
                 }
@@ -395,18 +396,19 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
 
     validZones.forEach((z) => {
         const outerAbs = Number.isFinite(z.outerAbsLat) ? z.outerAbsLat : 0.50 * W;
-        const rawInner = Number.isFinite(z.innerAbsLat) ? z.innerAbsLat : (outerAbs - 0.19 * W);
-        // Lebar ban F1 maksimal ~23% lebar mobil; jaga agar tidak pernah menyentuh sidepod/sasis
-        const innerAbs = Math.max(rawInner, outerAbs - 0.23 * W, 0.28 * W);
+        const rawInner = Number.isFinite(z.innerAbsLat) ? z.innerAbsLat : (outerAbs - 0.18 * W);
+        // Lebar ban F1 maksimal ~22% lebar mobil; jaga agar tidak menyentuh brake duct / wheel brow di sisi dalam
+        const innerAbs = Math.max(rawInner, outerAbs - 0.22 * W, 0.285 * W);
         const cLat = midLat + z.side * (innerAbs + outerAbs) * 0.5;
         z.center = longIsZ ? new Vec3(cLat, z.cY, z.cLng) : new Vec3(z.cLng, z.cY, cLat);
-        z.radius = z.exactR * 1.03;
+        // Radius sangat presisi (1.008x) agar ban penuh berputar, sementara wheel brow/fender di atas ban tetap diam!
+        z.radius = z.exactR * 1.008;
         if (z.side > 0) {
-            z.latMinBound = midLat + innerAbs - 0.005 * W;
+            z.latMinBound = midLat + innerAbs + 0.004 * W;
             z.latMaxBound = midLat + outerAbs + 0.015 * W;
         } else {
             z.latMinBound = midLat - outerAbs - 0.015 * W;
-            z.latMaxBound = midLat - innerAbs + 0.005 * W;
+            z.latMaxBound = midLat - innerAbs - 0.004 * W;
         }
     });
 
