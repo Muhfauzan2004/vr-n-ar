@@ -254,21 +254,10 @@ function repivotARObject(obj, parent, Vec3, GroupCtor) {
 
 function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, AttrCtor) {
     const wheels = [];
-    const carBox = getMeshLocalBox(root, Vec3);
-    if (!carBox) return wheels;
-
-    const sizeX = carBox.max.x - carBox.min.x;
-    const sizeY = carBox.max.y - carBox.min.y;
-    const sizeZ = carBox.max.z - carBox.min.z;
-    const longIsZ = sizeZ >= sizeX;
-    const W = longIsZ ? sizeX : sizeZ;
-    const L = longIsZ ? sizeZ : sizeX;
-    const midLat = longIsZ ? (carBox.min.x + carBox.max.x) * 0.5 : (carBox.min.z + carBox.max.z) * 0.5;
-    const minLong = longIsZ ? carBox.min.z : carBox.min.x;
-    const minY = carBox.min.y;
+    root.updateMatrixWorld(true);
+    const invRoot = root.matrixWorld.clone().invert();
 
     const meshes = [];
-    root.updateMatrixWorld(true);
     root.traverse((c) => {
         if (c.isMesh && c.geometry && c.geometry.attributes && c.geometry.attributes.position) {
             meshes.push(c);
@@ -276,64 +265,129 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
     });
     if (meshes.length === 0) return wheels;
 
-    // 4 zona roda F1: Rear-Left, Rear-Right, Front-Left, Front-Right
-    const zones = [
-        { side: -1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
-        { side:  1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
-        { side: -1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L },
-        { side:  1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L }
+    // Langkah 1: Hitung bounding box mobil dalam ruang LOKAL root (bebas mismatch rotasi/skala dunia!)
+    const carMin = new Vec3(Infinity, Infinity, Infinity);
+    const carMax = new Vec3(-Infinity, -Infinity, -Infinity);
+    const v = new Vec3();
+
+    const meshToRoots = meshes.map((mesh) => invRoot.clone().multiply(mesh.matrixWorld));
+
+    for (let mi = 0; mi < meshes.length; mi++) {
+        const pos = meshes[mi].geometry.attributes.position;
+        const m2r = meshToRoots[mi];
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+            if (v.x < carMin.x) carMin.x = v.x;
+            if (v.y < carMin.y) carMin.y = v.y;
+            if (v.z < carMin.z) carMin.z = v.z;
+            if (v.x > carMax.x) carMax.x = v.x;
+            if (v.y > carMax.y) carMax.y = v.y;
+            if (v.z > carMax.z) carMax.z = v.z;
+        }
+    }
+
+    const sizeX = carMax.x - carMin.x;
+    const sizeY = carMax.y - carMin.y;
+    const sizeZ = carMax.z - carMin.z;
+    const longIsZ = sizeZ >= sizeX;
+    const W = longIsZ ? sizeX : sizeZ;
+    const L = longIsZ ? sizeZ : sizeX;
+    const midLat = longIsZ ? (carMin.x + carMax.x) * 0.5 : (carMin.z + carMax.z) * 0.5;
+    const midLong = longIsZ ? (carMin.z + carMax.z) * 0.5 : (carMin.x + carMax.x) * 0.5;
+    const minY = carMin.y;
+
+    // Langkah 2: Deteksi tepat 4 titik tapak ban yang menyentuh lantai (y terbawah di sisi kiri/kanan luar)
+    const patches = [
+        { side: -1, end: -1, sumLat: 0, sumLng: 0, count: 0 }, // Rear-Left
+        { side:  1, end: -1, sumLat: 0, sumLng: 0, count: 0 }, // Rear-Right
+        { side: -1, end:  1, sumLat: 0, sumLng: 0, count: 0 }, // Front-Left
+        { side:  1, end:  1, sumLat: 0, sumLng: 0, count: 0 }  // Front-Right
     ];
 
-    const v = new Vec3();
-    // Langkah 1: Hitung bounding box & titik pusat as roda masing-masing kuadran
-    zones.forEach((z) => {
-        z.min = new Vec3(Infinity, Infinity, Infinity);
-        z.max = new Vec3(-Infinity, -Infinity, -Infinity);
-        z.count = 0;
-    });
-
-    for (const mesh of meshes) {
-        const pos = mesh.geometry.attributes.position;
+    for (let mi = 0; mi < meshes.length; mi++) {
+        const pos = meshes[mi].geometry.attributes.position;
+        const m2r = meshToRoots[mi];
         for (let i = 0; i < pos.count; i++) {
-            v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
-            const lat = (longIsZ ? v.x : v.z) - midLat;
+            v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+            if (v.y > minY + 0.10 * sizeY) continue; // Hanya tapak ban paling bawah!
+            const lat = longIsZ ? v.x : v.z;
             const lng = longIsZ ? v.z : v.x;
-            if (v.y > minY + 0.62 * sizeY) continue;
-            for (const z of zones) {
-                if (z.side * lat > 0.24 * W && lng >= z.l0 && lng <= z.l1) {
-                    if (v.x < z.min.x) z.min.x = v.x;
-                    if (v.y < z.min.y) z.min.y = v.y;
-                    if (v.z < z.min.z) z.min.z = v.z;
-                    if (v.x > z.max.x) z.max.x = v.x;
-                    if (v.y > z.max.y) z.max.y = v.y;
-                    if (v.z > z.max.z) z.max.z = v.z;
-                    z.count++;
+            const dLat = lat - midLat;
+            const dLng = lng - midLong;
+            if (Math.abs(dLat) < 0.28 * W) continue; // Di luar bodi tengah & lantai sasis
+            const idx = (dLng >= 0 ? 2 : 0) + (dLat >= 0 ? 1 : 0);
+            patches[idx].sumLat += lat;
+            patches[idx].sumLng += lng;
+            patches[idx].count++;
+        }
+    }
+
+    const validZones = [];
+    for (const p of patches) {
+        if (p.count < 10) continue;
+        validZones.push({
+            side: p.side,
+            patchLat: p.sumLat / p.count,
+            patchLng: p.sumLng / p.count,
+            minLat: Infinity, maxLat: -Infinity,
+            minY: Infinity, maxY: -Infinity,
+            minLng: Infinity, maxLng: -Infinity,
+            trisByMat: new Map()
+        });
+    }
+    if (validZones.length === 0) return wheels;
+
+    // Langkah 3: Ukur jari-jari & lebar eksak tiap ban dari seluruh vertex di sekitar tapaknya
+    const searchHalfLng = 0.085 * L;
+    const searchHalfLat = 0.18 * W;
+    for (let mi = 0; mi < meshes.length; mi++) {
+        const pos = meshes[mi].geometry.attributes.position;
+        const m2r = meshToRoots[mi];
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+            if (v.y > minY + 0.68 * sizeY) continue;
+            const lat = longIsZ ? v.x : v.z;
+            const lng = longIsZ ? v.z : v.x;
+            if (Math.abs(lat - midLat) < 0.24 * W) continue;
+            for (const z of validZones) {
+                if (z.side * (lat - midLat) > 0 &&
+                    Math.abs(lng - z.patchLng) <= searchHalfLng &&
+                    Math.abs(lat - z.patchLat) <= searchHalfLat) {
+                    if (lat < z.minLat) z.minLat = lat;
+                    if (lat > z.maxLat) z.maxLat = lat;
+                    if (v.y < z.minY) z.minY = v.y;
+                    if (v.y > z.maxY) z.maxY = v.y;
+                    if (lng < z.minLng) z.minLng = lng;
+                    if (lng > z.maxLng) z.maxLng = lng;
                 }
             }
         }
     }
 
-    const validZones = zones.filter((z) => z.count > 40);
-    if (validZones.length === 0) return wheels;
-
     validZones.forEach((z) => {
-        z.center = new Vec3(
-            (z.min.x + z.max.x) * 0.5,
-            (z.min.y + z.max.y) * 0.5,
-            (z.min.z + z.max.z) * 0.5
-        );
-        z.radius = Math.max((z.max.y - z.min.y) * 0.5, 0.05) * 1.08;
-        z.halfW = Math.max(((longIsZ ? (z.max.x - z.min.x) : (z.max.z - z.min.z)) * 0.5), 0.05) * 1.06;
-        z.trisByMat = new Map();
+        const cLat = (z.minLat + z.maxLat) * 0.5;
+        const cLng = (z.minLng + z.maxLng) * 0.5;
+        const radY = (z.maxY - z.minY) * 0.5;
+        const radL = (z.maxLng - z.minLng) * 0.5;
+        const r = Math.max(radY, radL, 0.05);
+        const cY = z.minY + radY;
+        z.center = longIsZ ? new Vec3(cLat, cY, cLng) : new Vec3(cLng, cY, cLat);
+        z.cLat = cLat;
+        z.cY = cY;
+        z.cLng = cLng;
+        z.radius = r * 1.08;
+        z.latMinBound = z.minLat - 0.015 * W;
+        z.latMaxBound = z.maxLat + 0.015 * W;
     });
 
     function classifyPoint(pt) {
+        const lat = longIsZ ? pt.x : pt.z;
+        const lng = longIsZ ? pt.z : pt.x;
         for (let zi = 0; zi < validZones.length; zi++) {
             const z = validZones[zi];
-            const dLat = Math.abs((longIsZ ? pt.x : pt.z) - (longIsZ ? z.center.x : z.center.z));
-            if (dLat > z.halfW) continue;
-            const dY = pt.y - z.center.y;
-            const dLng = (longIsZ ? pt.z : pt.x) - (longIsZ ? z.center.z : z.center.x);
+            if (lat < z.latMinBound || lat > z.latMaxBound) continue;
+            const dY = pt.y - z.cY;
+            const dLng = lng - z.cLng;
             if (dY * dY + dLng * dLng <= z.radius * z.radius) return zi;
         }
         return -1;
@@ -342,8 +396,10 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
     const v0 = new Vec3(), v1 = new Vec3(), v2 = new Vec3();
     const n0 = new Vec3();
 
-    // Langkah 2: Pisahkan segitiga roda dari bodi chassis
-    for (const mesh of meshes) {
+    // Langkah 4: Pisahkan segitiga roda dalam ruang LOKAL root (0mm pergeseran!)
+    for (let mi = 0; mi < meshes.length; mi++) {
+        const mesh = meshes[mi];
+        const m2r = meshToRoots[mi];
         const geom = mesh.geometry;
         const pos = geom.attributes.position;
         const norm = geom.attributes.normal;
@@ -359,9 +415,9 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
             const i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
             const i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
 
-            v0.fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld);
-            v1.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld);
-            v2.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
+            v0.fromBufferAttribute(pos, i0).applyMatrix4(m2r);
+            v1.fromBufferAttribute(pos, i1).applyMatrix4(m2r);
+            v2.fromBufferAttribute(pos, i2).applyMatrix4(m2r);
 
             const z0 = classifyPoint(v0);
             if (z0 >= 0 && classifyPoint(v1) === z0 && classifyPoint(v2) === z0) {
@@ -381,7 +437,7 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
                         verts[k].z - z.center.z
                     );
                     if (norm) {
-                        n0.fromBufferAttribute(norm, inds[k]).transformDirection(mesh.matrixWorld);
+                        n0.fromBufferAttribute(norm, inds[k]).transformDirection(m2r);
                         bucket.norm.push(n0.x, n0.y, n0.z);
                     }
                     if (uv) {
@@ -398,19 +454,11 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         }
     }
 
-    // Langkah 3: Buat 4 Pivot Group roda tepat di titik as masing-masing
-    const invRoot = root.matrixWorld.clone().invert();
+    // Langkah 5: Pasang 4 Pivot Group roda tepat di as roda lokal root (skala 1:1)
     for (const z of validZones) {
         if (z.trisByMat.size === 0) continue;
         const pivot = new GroupCtor();
-        const localCenter = z.center.clone().applyMatrix4(invRoot);
-        pivot.position.copy(localCenter);
-
-        // Skala kompensasi agar geometri dunia cocok di ruang lokal root
-        const sx = Math.hypot(root.matrixWorld.elements[0], root.matrixWorld.elements[1], root.matrixWorld.elements[2]) || 1;
-        const sy = Math.hypot(root.matrixWorld.elements[4], root.matrixWorld.elements[5], root.matrixWorld.elements[6]) || 1;
-        const sz = Math.hypot(root.matrixWorld.elements[8], root.matrixWorld.elements[9], root.matrixWorld.elements[10]) || 1;
-        pivot.scale.set(1 / sx, 1 / sy, 1 / sz);
+        pivot.position.copy(z.center);
 
         z.trisByMat.forEach((bucket, mat) => {
             const g = new GeomCtor();
@@ -475,9 +523,8 @@ function setupARWheelSpin() {
             wheelMeshes.forEach((wm) => {
                 const res = repivotARObject(wm, wm.parent, Vec3, GroupCtor);
                 if (res) {
-                    const sx = res.box.max.x - res.box.min.x;
-                    const sz = res.box.max.z - res.box.min.z;
-                    pivots.push({ pivot: res.pivot, axis: sx <= sz ? 'x' : 'z', dir: 1 });
+                    // Dalam ruang lokal parent Ducati, poros as roda selalu sumbu X (lebar terkecil)
+                    pivots.push({ pivot: res.pivot, axis: 'x', dir: 1 });
                 }
             });
         } else {

@@ -541,7 +541,30 @@
         function extractBakedCircuitWheels(root) {
             const wheels = [];
             root.updateMatrixWorld(true);
-            const carBox = new THREE.Box3().setFromObject(root);
+            const invRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+
+            const meshes = [];
+            root.traverse((c) => {
+                if (c.isMesh && c.geometry && c.geometry.attributes && c.geometry.attributes.position) {
+                    meshes.push(c);
+                }
+            });
+            if (meshes.length === 0) return wheels;
+
+            // Langkah 1: Hitung bounding box mobil dalam ruang LOKAL root (0mm pergeseran!)
+            const carBox = new THREE.Box3();
+            const v = new THREE.Vector3();
+            const meshToRoots = meshes.map((mesh) => new THREE.Matrix4().multiplyMatrices(invRoot, mesh.matrixWorld));
+
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const pos = meshes[mi].geometry.attributes.position;
+                const m2r = meshToRoots[mi];
+                for (let i = 0; i < pos.count; i++) {
+                    v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+                    carBox.expandByPoint(v);
+                }
+            }
+
             const size = carBox.getSize(new THREE.Vector3());
             const center = carBox.getCenter(new THREE.Vector3());
             const min = carBox.min;
@@ -550,62 +573,99 @@
             const W = longIsZ ? size.x : size.z;
             const L = longIsZ ? size.z : size.x;
             const midLat = longIsZ ? center.x : center.z;
-            const minLong = longIsZ ? min.z : min.x;
+            const midLong = longIsZ ? center.z : center.x;
 
-            const meshes = [];
-            root.traverse((c) => {
-                if (c.isMesh && c.geometry && c.geometry.attributes && c.geometry.attributes.position) {
-                    meshes.push(c);
-                }
-            });
-
-            // 4 kuadran roda F1 (Belakang Kiri/Kanan & Depan Kiri/Kanan)
-            const zones = [
-                { side: -1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
-                { side:  1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
-                { side: -1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L },
-                { side:  1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L }
+            // Langkah 2: Deteksi eksak 4 tapak ban paling bawah yang menyentuh aspal
+            const patches = [
+                { side: -1, sumLat: 0, sumLng: 0, count: 0 },
+                { side:  1, sumLat: 0, sumLng: 0, count: 0 },
+                { side: -1, sumLat: 0, sumLng: 0, count: 0 },
+                { side:  1, sumLat: 0, sumLng: 0, count: 0 }
             ];
-            zones.forEach((z) => {
-                z.box = new THREE.Box3();
-                z.count = 0;
-                z.trisByMat = new Map();
-            });
 
-            const v = new THREE.Vector3();
-            for (const mesh of meshes) {
-                const pos = mesh.geometry.attributes.position;
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const pos = meshes[mi].geometry.attributes.position;
+                const m2r = meshToRoots[mi];
                 for (let i = 0; i < pos.count; i++) {
-                    v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
-                    if (v.y > min.y + 0.62 * size.y) continue;
-                    const lat = (longIsZ ? v.x : v.z) - midLat;
+                    v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+                    if (v.y > min.y + 0.10 * size.y) continue;
+                    const lat = longIsZ ? v.x : v.z;
                     const lng = longIsZ ? v.z : v.x;
-                    for (const z of zones) {
-                        if (z.side * lat > 0.24 * W && lng >= z.l0 && lng <= z.l1) {
-                            z.box.expandByPoint(v);
-                            z.count++;
+                    const dLat = lat - midLat;
+                    const dLng = lng - midLong;
+                    if (Math.abs(dLat) < 0.28 * W) continue;
+                    const idx = (dLng >= 0 ? 2 : 0) + (dLat >= 0 ? 1 : 0);
+                    patches[idx].sumLat += lat;
+                    patches[idx].sumLng += lng;
+                    patches[idx].count++;
+                }
+            }
+
+            const validZones = [];
+            for (const p of patches) {
+                if (p.count < 10) continue;
+                validZones.push({
+                    side: p.side,
+                    patchLat: p.sumLat / p.count,
+                    patchLng: p.sumLng / p.count,
+                    minLat: Infinity, maxLat: -Infinity,
+                    minY: Infinity, maxY: -Infinity,
+                    minLng: Infinity, maxLng: -Infinity,
+                    trisByMat: new Map()
+                });
+            }
+            if (validZones.length === 0) return wheels;
+
+            // Langkah 3: Ukur jari-jari & lebar eksak tiap ban di sekitar tapaknya
+            const searchHalfLng = 0.085 * L;
+            const searchHalfLat = 0.18 * W;
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const pos = meshes[mi].geometry.attributes.position;
+                const m2r = meshToRoots[mi];
+                for (let i = 0; i < pos.count; i++) {
+                    v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+                    if (v.y > min.y + 0.68 * size.y) continue;
+                    const lat = longIsZ ? v.x : v.z;
+                    const lng = longIsZ ? v.z : v.x;
+                    if (Math.abs(lat - midLat) < 0.24 * W) continue;
+                    for (const z of validZones) {
+                        if (z.side * (lat - midLat) > 0 &&
+                            Math.abs(lng - z.patchLng) <= searchHalfLng &&
+                            Math.abs(lat - z.patchLat) <= searchHalfLat) {
+                            if (lat < z.minLat) z.minLat = lat;
+                            if (lat > z.maxLat) z.maxLat = lat;
+                            if (v.y < z.minY) z.minY = v.y;
+                            if (v.y > z.maxY) z.maxY = v.y;
+                            if (lng < z.minLng) z.minLng = lng;
+                            if (lng > z.maxLng) z.maxLng = lng;
                         }
                     }
                 }
             }
 
-            const validZones = zones.filter((z) => z.count > 40);
-            if (validZones.length === 0) return wheels;
-
             validZones.forEach((z) => {
-                z.center = z.box.getCenter(new THREE.Vector3());
-                const zSize = z.box.getSize(new THREE.Vector3());
-                z.radius = Math.max(zSize.y * 0.5, 0.05) * 1.08;
-                z.halfW = Math.max((longIsZ ? zSize.x : zSize.z) * 0.5, 0.05) * 1.06;
+                const cLat = (z.minLat + z.maxLat) * 0.5;
+                const cLng = (z.minLng + z.maxLng) * 0.5;
+                const radY = (z.maxY - z.minY) * 0.5;
+                const radL = (z.maxLng - z.minLng) * 0.5;
+                const r = Math.max(radY, radL, 0.05);
+                const cY = z.minY + radY;
+                z.center = longIsZ ? new THREE.Vector3(cLat, cY, cLng) : new THREE.Vector3(cLng, cY, cLat);
+                z.cY = cY;
+                z.cLng = cLng;
+                z.radius = r * 1.08;
+                z.latMinBound = z.minLat - 0.015 * W;
+                z.latMaxBound = z.maxLat + 0.015 * W;
             });
 
             function classify(pt) {
+                const lat = longIsZ ? pt.x : pt.z;
+                const lng = longIsZ ? pt.z : pt.x;
                 for (let zi = 0; zi < validZones.length; zi++) {
                     const z = validZones[zi];
-                    const dLat = Math.abs((longIsZ ? pt.x : pt.z) - (longIsZ ? z.center.x : z.center.z));
-                    if (dLat > z.halfW) continue;
-                    const dY = pt.y - z.center.y;
-                    const dLng = (longIsZ ? pt.z : pt.x) - (longIsZ ? z.center.z : z.center.x);
+                    if (lat < z.latMinBound || lat > z.latMaxBound) continue;
+                    const dY = pt.y - z.cY;
+                    const dLng = lng - z.cLng;
                     if (dY * dY + dLng * dLng <= z.radius * z.radius) return zi;
                 }
                 return -1;
@@ -614,7 +674,10 @@
             const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
             const n0 = new THREE.Vector3();
 
-            for (const mesh of meshes) {
+            // Langkah 4: Pisahkan segitiga roda dalam ruang LOKAL root
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const mesh = meshes[mi];
+                const m2r = meshToRoots[mi];
                 const geom = mesh.geometry;
                 const pos = geom.attributes.position;
                 const norm = geom.attributes.normal;
@@ -629,9 +692,9 @@
                     const i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
                     const i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
 
-                    v0.fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld);
-                    v1.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld);
-                    v2.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
+                    v0.fromBufferAttribute(pos, i0).applyMatrix4(m2r);
+                    v1.fromBufferAttribute(pos, i1).applyMatrix4(m2r);
+                    v2.fromBufferAttribute(pos, i2).applyMatrix4(m2r);
 
                     const z0 = classify(v0);
                     if (z0 >= 0 && classify(v1) === z0 && classify(v2) === z0) {
@@ -647,7 +710,7 @@
                         for (let k = 0; k < 3; k++) {
                             bucket.pos.push(verts[k].x - z.center.x, verts[k].y - z.center.y, verts[k].z - z.center.z);
                             if (norm) {
-                                n0.fromBufferAttribute(norm, inds[k]).transformDirection(mesh.matrixWorld);
+                                n0.fromBufferAttribute(norm, inds[k]).transformDirection(m2r);
                                 bucket.norm.push(n0.x, n0.y, n0.z);
                             }
                             if (uv) bucket.uv.push(uv.getX(inds[k]), uv.getY(inds[k]));
@@ -662,16 +725,11 @@
                 }
             }
 
-            const invRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
-            const sx = root.scale.x || 1;
-            const sy = root.scale.y || 1;
-            const sz = root.scale.z || 1;
-
+            // Langkah 5: Pasang 4 Pivot Group roda tepat pada as lokal root (skala 1:1)
             for (const z of validZones) {
                 if (z.trisByMat.size === 0) continue;
                 const pivot = new THREE.Group();
-                pivot.position.copy(z.center).applyMatrix4(invRoot);
-                pivot.scale.set(1 / sx, 1 / sy, 1 / sz);
+                pivot.position.copy(z.center);
 
                 z.trisByMat.forEach((bucket, mat) => {
                     const g = new THREE.BufferGeometry();
@@ -716,7 +774,7 @@
                     });
                     wheelMeshes.forEach((wm) => {
                         const res = repivotCircuitWheel(wm);
-                        if (res) spinningWheels.push({ pivot: res.pivot, axis: res.size.x <= res.size.z ? 'x' : 'z', dir: 1 });
+                        if (res) spinningWheels.push({ pivot: res.pivot, axis: 'x', dir: 1 });
                     });
                 } else {
                     const fallbackWheels = [];
