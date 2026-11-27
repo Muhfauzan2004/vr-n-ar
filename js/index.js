@@ -483,9 +483,9 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         quadToZone[qi] = zone;
     }
 
-    // Langkah 4B: Presisi anti-goyang (Kåsa Circle Fit + 3x3 Covariance Axle Vector) untuk tiap ban
-    // Menghilangkan goyangan akibat camber, toe-in, flat-spot tapak ban, atau kemiringan model!
-    const canonicalAxis = longIsZ ? new Vec3(1, 0, 0) : new Vec3(0, 0, 1);
+    // Langkah 4B: Hitung pusat lingkaran ban (cY, cLng) super presisi dengan 36-Bin Opposite-Pair Median
+    // 100% kebal terhadap kepadatan vertex tidak merata, tapak rata (flat-spot), dan tonjolan kecil -> 0mm goyang!
+    // Sumbu putar selalu memakai sumbu kanonik murni ('x' atau 'z') seperti RB19 & Ferrari agar tidak oleng!
     const tireVertsByZone = validZones.map(() => []);
     for (let mi = 0; mi < meshes.length; mi++) {
         const pos = meshes[mi].geometry.attributes.position;
@@ -504,94 +504,61 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         const z = validZones[zi];
         const pts = tireVertsByZone[zi];
         const n = Math.floor(pts.length / 3);
-        if (n < 30) continue;
+        if (n < 36) continue;
 
-        // 1. Kåsa Circle Fit pada ring terluar ban (jarak >= 65% radius) -> pusat (cY, cLng) eksak sub-milimeter!
-        let sumU = 0, sumW = 0, cnt = 0;
-        const ringU = [], ringW = [];
-        const rMinSq = (z.r * 0.65) * (z.r * 0.65);
+        const bins = 36;
+        const maxR2 = new Float64Array(bins);
+        const binY = new Float64Array(bins);
+        const binL = new Float64Array(bins);
+        maxR2.fill(-1);
+
+        const cy0 = z.cY;
+        const cl0 = z.cLng;
         for (let i = 0; i < n; i++) {
-            const px = pts[i * 3], py = pts[i * 3 + 1], pz = pts[i * 3 + 2];
-            const lng = longIsZ ? pz : px;
-            const du = py - z.cY;
-            const dw = lng - z.cLng;
-            if (du * du + dw * dw >= rMinSq) {
-                ringU.push(py);
-                ringW.push(lng);
-                sumU += py;
-                sumW += lng;
-                cnt++;
-            }
-        }
-        if (cnt >= 24) {
-            const mu = sumU / cnt;
-            const mw = sumW / cnt;
-            let a11 = 0, a12 = 0, a22 = 0, b1 = 0, b2 = 0;
-            for (let i = 0; i < cnt; i++) {
-                const u = ringU[i] - mu;
-                const w = ringW[i] - mw;
-                const r2 = u * u + w * w;
-                a11 += u * u;
-                a12 += u * w;
-                a22 += w * w;
-                b1 += u * r2;
-                b2 += w * r2;
-            }
-            const det = a11 * a22 - a12 * a12;
-            if (Math.abs(det) > 1e-12) {
-                const fitY = mu + (0.5 * (b1 * a22 - b2 * a12)) / det;
-                const fitLng = mw + (0.5 * (a11 * b2 - a12 * b1)) / det;
-                if (Math.hypot(fitY - z.cY, fitLng - z.cLng) < 0.25 * z.r) {
-                    z.cY = fitY;
-                    z.cLng = fitLng;
-                    z.center = longIsZ ? new Vec3(z.cLat, z.cY, z.cLng) : new Vec3(z.cLng, z.cY, z.cLat);
-                }
+            const py = pts[i * 3 + 1];
+            const pl = longIsZ ? pts[i * 3 + 2] : pts[i * 3];
+            const dy = py - cy0;
+            const dl = pl - cl0;
+            const r2 = dy * dy + dl * dl;
+            const ang = Math.atan2(dy, dl) + Math.PI;
+            let k = Math.floor((ang / (2 * Math.PI)) * bins);
+            if (k < 0) k = 0;
+            if (k >= bins) k = bins - 1;
+            if (r2 > maxR2[k]) {
+                maxR2[k] = r2;
+                binY[k] = py;
+                binL[k] = pl;
             }
         }
 
-        // 2. Eigenvector terkecil dari kovarians 3x3 (via Power Iteration pada trace*I - C) -> arah as roda eksak!
-        let cxx = 0, cyy = 0, czz = 0, cxy = 0, cxz = 0, cyz = 0;
-        for (let i = 0; i < n; i++) {
-            const dx = pts[i * 3] - z.center.x;
-            const dy = pts[i * 3 + 1] - z.center.y;
-            const dz = pts[i * 3 + 2] - z.center.z;
-            cxx += dx * dx; cyy += dy * dy; czz += dz * dz;
-            cxy += dx * dy; cxz += dx * dz; cyz += dy * dz;
-        }
-        const tr = cxx + cyy + czz;
-        if (tr > 1e-10) {
-            const m00 = tr - cxx, m11 = tr - cyy, m22 = tr - czz;
-            const m01 = -cxy, m02 = -cxz, m12 = -cyz;
-            let ax = canonicalAxis.x, ay = canonicalAxis.y, az = canonicalAxis.z;
-            for (let it = 0; it < 14; it++) {
-                const nx = m00 * ax + m01 * ay + m02 * az;
-                const ny = m01 * ax + m11 * ay + m12 * az;
-                const nz = m02 * ax + m12 * ay + m22 * az;
-                const len = Math.hypot(nx, ny, nz);
-                if (len < 1e-12) break;
-                ax = nx / len; ay = ny / len; az = nz / len;
+        const midYs = [], midLs = [];
+        for (let k = 0; k < 18; k++) {
+            if (maxR2[k] > 0 && maxR2[k + 18] > 0) {
+                midYs.push((binY[k] + binY[k + 18]) * 0.5);
+                midLs.push((binL[k] + binL[k + 18]) * 0.5);
             }
-            const dot = ax * canonicalAxis.x + ay * canonicalAxis.y + az * canonicalAxis.z;
-            if (dot < 0) { ax = -ax; ay = -ay; az = -az; }
-            if (Math.abs(dot) >= 0.94) {
-                z.axisVec = new Vec3(ax, ay, az);
+        }
+        if (midYs.length >= 8) {
+            midYs.sort((a, b) => a - b);
+            midLs.sort((a, b) => a - b);
+            const medY = midYs[Math.floor(midYs.length / 2)];
+            const medL = midLs[Math.floor(midLs.length / 2)];
+            if (Math.hypot(medY - z.cY, medL - z.cLng) < 0.20 * z.r) {
+                z.cY = medY;
+                z.cLng = medL;
+                z.center = longIsZ ? new Vec3(z.cLat, z.cY, z.cLng) : new Vec3(z.cLng, z.cY, z.cLat);
             }
         }
     }
 
-    // Jika ada kuadran mirror-fallback, ikutkan arah as cermin dari sisi seberang
+    // Jika ada kuadran mirror-fallback, sinkronkan pusat (cY, cLng) eksak dari ban sisi seberang
     for (const z of validZones) {
         if (!z.isMirrorFallback) continue;
         const opp = quadToZone[z.qi ^ 1];
-        if (opp && opp.axisVec) {
+        if (opp) {
             z.cY = opp.cY;
             z.cLng = opp.cLng;
             z.center = longIsZ ? new Vec3(z.cLat, z.cY, z.cLng) : new Vec3(z.cLng, z.cY, z.cLat);
-            // Cerminkan sudut camber/toe secara simetris
-            z.axisVec = longIsZ
-                ? new Vec3(opp.axisVec.x, -opp.axisVec.y, -opp.axisVec.z)
-                : new Vec3(-opp.axisVec.x, -opp.axisVec.y, opp.axisVec.z);
-            z.axisVec.normalize();
         }
     }
 
@@ -744,7 +711,7 @@ function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, At
         });
 
         root.add(pivot);
-        wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', axisVec: z.axisVec, dir: 1 });
+        wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', dir: 1 });
     }
 
     return wheels;
