@@ -697,8 +697,7 @@
         </div>
     </div>
 
-    <!-- Audio Elements -->
-    <audio id="bgm-theme" src="./f1_theme.m4a" loop preload="auto"></audio>
+    <!-- Audio Elements (Hanya Suara Mesin Mobil, Tanpa Theme Song F1) -->
     <audio id="car-engine-audio" loop preload="auto"></audio>
 
     <script>
@@ -1140,7 +1139,6 @@
                 setTimeout(() => loaderEl.style.display = 'none', 500);
 
                 if (soundEnabled) {
-                    playBgmTheme();
                     playCarEngineAudio();
                 }
             }
@@ -1283,9 +1281,7 @@
                     setFlag(true);
                     el.classList.add('active');
                     if (navigator.vibrate) navigator.vibrate(12);
-                    if (!audioCtx) initEngineAudio();
-                    playBgmTheme();
-                    playCarEngineAudio();
+                    unlockCircuitAudio();
                 };
 
                 const stop = (e) => {
@@ -1310,9 +1306,7 @@
 
             // Dukungan Keyboard Desktop (WASD & Tombol Panah)
             window.addEventListener('keydown', (e) => {
-                if (!audioCtx) initEngineAudio();
-                playBgmTheme();
-                playCarEngineAudio();
+                unlockCircuitAudio();
 
                 if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
                     isSteerLeft = true;
@@ -1431,35 +1425,31 @@
             } catch (e) {}
         }
 
-        function playBgmTheme() {
-            const bgm = document.getElementById('bgm-theme');
-            if (bgm && soundEnabled) {
-                bgm.volume = 0.45;
-                bgm.play().catch(() => {});
-            }
-        }
-
-        // Putar Suara Mesin Asli Khusus Mobil yang Dipilih
+        // Putar Suara Mesin Asli Khusus Mobil yang Dipilih (Tanpa Theme Song F1)
         function playCarEngineAudio() {
             const engAudio = document.getElementById('car-engine-audio');
             if (engAudio && soundEnabled && carData.sound) {
                 if (!engAudio.src.endsWith(carData.sound.replace(/^\.\//, ''))) {
                     engAudio.src = carData.sound;
                 }
-                engAudio.volume = 0.55;
+                engAudio.volume = 0.7;
                 engAudio.play().catch(() => {});
+            }
+        }
+
+        function unlockCircuitAudio() {
+            if (!carData.sound && !audioCtx) {
+                initEngineAudio();
+            }
+            if (soundEnabled) {
+                playCarEngineAudio();
             }
         }
 
         function toggleSound() {
             soundEnabled = !soundEnabled;
             document.getElementById('sound-btn').innerText = soundEnabled ? '🔊' : '🔇';
-            const bgm = document.getElementById('bgm-theme');
             const engAudio = document.getElementById('car-engine-audio');
-            if (bgm) {
-                if (soundEnabled) bgm.play().catch(() => {});
-                else bgm.pause();
-            }
             if (engAudio) {
                 if (soundEnabled) playCarEngineAudio();
                 else engAudio.pause();
@@ -1469,11 +1459,8 @@
             }
         }
 
-        window.addEventListener('click', () => {
-            if (!audioCtx) initEngineAudio();
-            playBgmTheme();
-            playCarEngineAudio();
-        }, { once: true });
+        window.addEventListener('click', unlockCircuitAudio, { once: true });
+        window.addEventListener('touchstart', unlockCircuitAudio, { once: true, passive: true });
 
         // Animasi Loop Balapan
         const clock = new THREE.Clock();
