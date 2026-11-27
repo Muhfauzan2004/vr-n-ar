@@ -1,5 +1,5 @@
 // Service Worker: Caching Aset 3D & Audio agar WebAR Super Ringan & Bisa Offline
-const CACHE_NAME = 'webar-racing-v25';
+const CACHE_NAME = 'webar-racing-v26';
 
 const PRECACHE_ASSETS = [
   './index.html',

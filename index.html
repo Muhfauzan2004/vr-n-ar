@@ -814,6 +814,14 @@
                     <span class="f1-info-label">🚀 Top Speed</span>
                     <span class="f1-info-value" id="f1-info-topspeed">-</span>
                 </div>
+                <div class="f1-stat-pill">
+                    <span class="f1-info-label">⏱️ 0–100 km/jam</span>
+                    <span class="f1-info-value" id="f1-info-accel">-</span>
+                </div>
+                <div class="f1-stat-pill">
+                    <span class="f1-info-label">⚖️ Bobot Minimum</span>
+                    <span class="f1-info-value" id="f1-info-weight">-</span>
+                </div>
             </div>
             <div class="f1-info-row">
                 <span class="f1-info-icon">📅</span>
@@ -873,9 +881,11 @@
                 drivers: 'Max Verstappen (#1) & Sergio Pérez (#11)',
                 hp: '~1.000+ HP',
                 topSpeed: '~355 km/jam',
+                accel: '~2,6 detik',
+                weight: '798 kg (FIA)',
                 engine: 'Honda RBPTH001 • 1.6L V6 Turbo Hybrid (8-Speed Semi-Otomatis)',
                 championship: 'Juara Dunia Pembalap & Konstruktor F1 2023 (21 menang dari 22 seri • Rekor 95,5% kemenangan)',
-                fact: 'Dirancang oleh Adrian Newey, RB19 tercatat sebagai mobil F1 paling dominan sepanjang sejarah — mencetak 15 kemenangan beruntun dan 19 kemenangan Max Verstappen dalam satu musim.'
+                fact: 'Dirancang oleh Adrian Newey, RB19 tercatat sebagai mobil F1 paling dominan sepanjang sejarah — mencetak 14 kemenangan beruntun di 2023 (15 beruntun tim sejak akhir 2022), plus rekor 10 kemenangan beruntun dan 19 kemenangan Max Verstappen dalam satu musim.'
             },
             'ferrari': {
                 name: 'Ferrari F1-75',
@@ -887,9 +897,11 @@
                 drivers: 'Charles Leclerc (#16) & Carlos Sainz Jr. (#55)',
                 hp: '~1.000 HP',
                 topSpeed: '~350 km/jam',
+                accel: '~2,6 detik',
+                weight: '798 kg (FIA)',
                 engine: 'Ferrari 066/7 • 1.6L V6 Turbo Hybrid (8-Speed Semi-Otomatis)',
-                championship: 'Runner-Up Konstruktor & Pembalap F1 2022 (4 Kemenangan GP, 12 Pole Position, 20 Podium)',
-                fact: 'Dinamai F1-75 untuk merayakan 75 tahun mobil produksi pertama Ferrari (1947). Terkenal dengan desain sidepod "bathtub" yang agresif dan kecepatan kualifikasi paling kencang di musim 2022.'
+                championship: 'Runner-Up Konstruktor (554 Poin) & Pembalap F1 2022 (4 Kemenangan GP, 12 Pole Position, 20 Podium)',
+                fact: 'Dinamai F1-75 untuk merayakan 75 tahun mobil produksi pertama Ferrari (125 S, 1947). Menjadi comeback terbaik Ferrari di era ground-effect dengan desain sidepod "bathtub" agresif dan kecepatan kualifikasi terkencang di 2022.'
             },
             'mercedes': {
                 name: 'Mercedes-AMG F1 W15',
@@ -901,8 +913,10 @@
                 drivers: 'Lewis Hamilton (#44) & George Russell (#63)',
                 hp: '~1.000+ HP',
                 topSpeed: '~352 km/jam',
+                accel: '~2,6 detik',
+                weight: '798 kg (FIA)',
                 engine: 'Mercedes-AMG F1 M15 E Performance • 1.6L V6 Turbo Hybrid (8-Speed)',
-                championship: '4 Kemenangan GP Musim F1 2024 (Austria, Inggris/Silverstone, Belgia, Las Vegas) • P4 Konstruktor',
+                championship: '4 Kemenangan GP Musim F1 2024 (Austria, Inggris/Silverstone, Belgia, Las Vegas) • P4 Konstruktor (468 Poin)',
                 fact: 'Mobil terakhir Lewis Hamilton bersama Mercedes sebelum pindah ke Ferrari. Mencetak rekor 9 kemenangan Hamilton di kandangnya Silverstone serta finis dominan 1–2 di GP Las Vegas 2024.'
             },
             'astonmartin': {
@@ -915,9 +929,11 @@
                 drivers: 'Fernando Alonso (#14) & Lance Stroll (#18)',
                 hp: '~1.000 HP',
                 topSpeed: '~348 km/jam',
+                accel: '~2,6 detik',
+                weight: '798 kg (FIA)',
                 engine: 'Mercedes-AMG F1 M14 E Performance • 1.6L V6 Turbo Hybrid (8-Speed)',
-                championship: '8 Podium di Musim F1 2023 (2x P2 & 6x P3 oleh Fernando Alonso) • P5 Konstruktor (280 Poin)',
-                fact: 'Menjadi kejutan terbesar F1 2023 setelah melesat dari papan tengah ke barisan podium sejak seri pembuka di Bahrain dan mengantar Fernando Alonso meraih podium ke-100 sepanjang kariernya.'
+                championship: '8 Podium di Musim F1 2023 (3x P2 di Monako/Kanada/Belanda & 5x P3 oleh Fernando Alonso) • P5 Konstruktor (280 Poin)',
+                fact: 'Menjadi kejutan terbesar F1 2023 setelah melesat dari peringkat 7 musim 2022 ke barisan podium sejak seri pembuka Bahrain dan mengantar Fernando Alonso meraih podium ke-100 sepanjang kariernya di GP Arab Saudi.'
             },
             'ducati': {
                 name: 'Ducati Desmosedici GP',
@@ -965,6 +981,8 @@
         const f1InfoCard = document.getElementById('f1-info-card');
         const f1InfoHp = document.getElementById('f1-info-hp');
         const f1InfoTopSpeed = document.getElementById('f1-info-topspeed');
+        const f1InfoAccel = document.getElementById('f1-info-accel');
+        const f1InfoWeight = document.getElementById('f1-info-weight');
         const f1InfoYear = document.getElementById('f1-info-year');
         const f1InfoDrivers = document.getElementById('f1-info-drivers');
         const f1InfoEngine = document.getElementById('f1-info-engine');
@@ -978,6 +996,8 @@
             if (data && data.year && data.drivers) {
                 if (f1InfoHp) f1InfoHp.innerText = data.hp || '-';
                 if (f1InfoTopSpeed) f1InfoTopSpeed.innerText = data.topSpeed || '-';
+                if (f1InfoAccel) f1InfoAccel.innerText = data.accel || '-';
+                if (f1InfoWeight) f1InfoWeight.innerText = data.weight || '-';
                 if (f1InfoYear) f1InfoYear.innerText = data.year;
                 if (f1InfoDrivers) f1InfoDrivers.innerText = data.drivers;
                 if (f1InfoEngine) f1InfoEngine.innerText = data.engine || '-';
