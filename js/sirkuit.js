@@ -576,132 +576,182 @@
             const midLong = longIsZ ? center.z : center.x;
 
             // Langkah 2: Deteksi eksak 4 tapak ban paling bawah yang menyentuh aspal
-            // Langkah 2: Deteksi tepat 4 roda HANYA dari pita dinding luar bagian ATAS ban (|dLat| >= 0.42*W, y di 42%-62% tinggi)
-            const quads = [
-                { side: -1, end: -1, minLng: Infinity, maxLng: -Infinity, count: 0 },
-                { side:  1, end: -1, minLng: Infinity, maxLng: -Infinity, count: 0 },
-                { side: -1, end:  1, minLng: Infinity, maxLng: -Infinity, count: 0 },
-                { side:  1, end:  1, minLng: Infinity, maxLng: -Infinity, count: 0 }
-            ];
+            // Langkah 2: Connected Components (Union-Find) berbasis posisi 3D terkuantisasi (~1.4 mm)
+            let totalVerts = 0;
+            const meshOffsets = [];
+            for (let mi = 0; mi < meshes.length; mi++) {
+                meshOffsets.push(totalVerts);
+                totalVerts += meshes[mi].geometry.attributes.position.count;
+            }
+            const maxDim = Math.max(size.x, size.y, size.z, 1e-5);
+            const parent = new Int32Array(totalVerts);
+            for (let i = 0; i < totalVerts; i++) parent[i] = i;
 
+            function find(x) {
+                let r = x;
+                while (parent[r] !== r) r = parent[r];
+                while (parent[x] !== r) {
+                    const nxt = parent[x];
+                    parent[x] = r;
+                    x = nxt;
+                }
+                return r;
+            }
+            function unite(a, b) {
+                const ra = find(a);
+                const rb = find(b);
+                if (ra !== rb) parent[rb] = ra;
+            }
+
+            const qScale = 3800 / maxDim;
+            const posMap = new Map();
             for (let mi = 0; mi < meshes.length; mi++) {
                 const pos = meshes[mi].geometry.attributes.position;
                 const m2r = meshToRoots[mi];
+                const off = meshOffsets[mi];
                 for (let i = 0; i < pos.count; i++) {
                     v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
-                    const relY = (v.y - min.y) / size.y;
-                    if (relY < 0.42 || relY > 0.62) continue;
-                    const lat = longIsZ ? v.x : v.z;
-                    const lng = longIsZ ? v.z : v.x;
-                    const dLat = lat - midLat;
-                    const dLng = lng - midLong;
-                    if (Math.abs(dLat) < 0.42 * W) continue;
-                    if (Math.abs(dLng) > 0.44 * L) continue;
-                    const idx = (dLng >= 0 ? 2 : 0) + (dLat >= 0 ? 1 : 0);
-                    const q = quads[idx];
-                    if (lng < q.minLng) q.minLng = lng;
-                    if (lng > q.maxLng) q.maxLng = lng;
-                    q.count++;
+                    const ix = Math.round((v.x - min.x) * qScale);
+                    const iy = Math.round((v.y - min.y) * qScale);
+                    const iz = Math.round((v.z - min.z) * qScale);
+                    const key = ix * 16777216 + iy * 4096 + iz;
+                    const prev = posMap.get(key);
+                    const gid = off + i;
+                    if (prev === undefined) {
+                        posMap.set(key, gid);
+                    } else {
+                        unite(prev, gid);
+                    }
+                }
+            }
+            posMap.clear();
+
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const geom = meshes[mi].geometry;
+                const pos = geom.attributes.position;
+                const idx = geom.index;
+                const off = meshOffsets[mi];
+                const triCount = idx ? Math.floor(idx.count / 3) : Math.floor(pos.count / 3);
+                for (let t = 0; t < triCount; t++) {
+                    const i0 = off + (idx ? idx.getX(t * 3) : t * 3);
+                    const i1 = off + (idx ? idx.getX(t * 3 + 1) : t * 3 + 1);
+                    const i2 = off + (idx ? idx.getX(t * 3 + 2) : t * 3 + 2);
+                    unite(i0, i1);
+                    unite(i0, i2);
                 }
             }
 
+            const compStats = new Map();
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const geom = meshes[mi].geometry;
+                const pos = geom.attributes.position;
+                const idx = geom.index;
+                const m2r = meshToRoots[mi];
+                const off = meshOffsets[mi];
+                const triCount = idx ? Math.floor(idx.count / 3) : Math.floor(pos.count / 3);
+                for (let t = 0; t < triCount; t++) {
+                    const li0 = idx ? idx.getX(t * 3) : t * 3;
+                    const li1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
+                    const li2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+                    const cid = find(off + li0);
+                    let st = compStats.get(cid);
+                    if (!st) {
+                        st = {
+                            cid, triCount: 0,
+                            minLat: Infinity, maxLat: -Infinity,
+                            minY: Infinity, maxY: -Infinity,
+                            minLng: Infinity, maxLng: -Infinity
+                        };
+                        compStats.set(cid, st);
+                    }
+                    st.triCount++;
+                    const lis = [li0, li1, li2];
+                    for (let k = 0; k < 3; k++) {
+                        v.fromBufferAttribute(pos, lis[k]).applyMatrix4(m2r);
+                        const lat = longIsZ ? v.x : v.z;
+                        const lng = longIsZ ? v.z : v.x;
+                        if (lat < st.minLat) st.minLat = lat;
+                        if (lat > st.maxLat) st.maxLat = lat;
+                        if (v.y < st.minY) st.minY = v.y;
+                        if (v.y > st.maxY) st.maxY = v.y;
+                        if (lng < st.minLng) st.minLng = lng;
+                        if (lng > st.maxLng) st.maxLng = lng;
+                    }
+                }
+            }
+
+            const quadBest = [null, null, null, null];
+            compStats.forEach((st) => {
+                if (st.triCount < 60) return;
+                const sY = st.maxY - st.minY;
+                const sLng = st.maxLng - st.minLng;
+                const sLat = st.maxLat - st.minLat;
+                if (sY < 0.08 * L || sY > 0.20 * L) return;
+                const aspect = sY / Math.max(sLng, 1e-5);
+                if (aspect < 0.85 || aspect > 1.18) return;
+                if (sLat < 0.07 * W || sLat > 0.28 * W) return;
+                if (st.minY > min.y + 0.08 * size.y) return;
+                const cLat = (st.minLat + st.maxLat) * 0.5;
+                const cLng = (st.minLng + st.maxLng) * 0.5;
+                const dLat = cLat - midLat;
+                const dLng = cLng - midLong;
+                const outerAbs = Math.max(Math.abs(st.minLat - midLat), Math.abs(st.maxLat - midLat));
+                if (outerAbs < 0.43 * W) return;
+
+                const qIdx = (dLng >= 0 ? 2 : 0) + (dLat >= 0 ? 1 : 0);
+                if (!quadBest[qIdx] || st.triCount > quadBest[qIdx].triCount) {
+                    quadBest[qIdx] = st;
+                }
+            });
+
             const validZones = [];
-            for (const q of quads) {
-                if (q.count < 10) continue;
-                const cLng = (q.minLng + q.maxLng) * 0.5;
+            const compToZone = new Map();
+            for (let qi = 0; qi < 4; qi++) {
+                const tire = quadBest[qi];
+                if (!tire) continue;
+                const cLat = (tire.minLat + tire.maxLat) * 0.5;
+                const cY = (tire.minY + tire.maxY) * 0.5;
+                const cLng = (tire.minLng + tire.maxLng) * 0.5;
+                const r = Math.max((tire.maxY - tire.minY) * 0.5, (tire.maxLng - tire.minLng) * 0.5);
+                const zIdx = validZones.length;
                 validZones.push({
-                    side: q.side,
-                    cLng,
-                    wMinY: Infinity, wMaxY: -Infinity,
-                    innerAbsLat: Infinity, outerAbsLat: -Infinity,
+                    side: (cLat >= midLat) ? 1 : -1,
+                    center: longIsZ ? new THREE.Vector3(cLat, cY, cLng) : new THREE.Vector3(cLng, cY, cLat),
+                    cLat, cY, cLng, r,
+                    minLat: tire.minLat, maxLat: tire.maxLat,
+                    minY: tire.minY, maxY: tire.maxY,
+                    minLng: tire.minLng, maxLng: tire.maxLng,
                     trisByMat: new Map()
+                });
+                compToZone.set(tire.cid, zIdx);
+            }
+
+            if (validZones.length > 0) {
+                compStats.forEach((st) => {
+                    if (compToZone.has(st.cid)) return;
+                    for (let zi = 0; zi < validZones.length; zi++) {
+                        const z = validZones[zi];
+                        const tolR = z.r * 0.025;
+                        const tolLatIn = 0.004 * W;
+                        const tolLatOut = 0.015 * W;
+                        const latOk = z.side > 0
+                            ? (st.minLat >= z.minLat - tolLatIn && st.maxLat <= z.maxLat + tolLatOut)
+                            : (st.minLat >= z.minLat - tolLatOut && st.maxLat <= z.maxLat + tolLatIn);
+                        if (latOk &&
+                            st.minY >= z.minY - tolR && st.maxY <= z.maxY + tolR &&
+                            st.minLng >= z.minLng - tolR && st.maxLng <= z.maxLng + tolR) {
+                            compToZone.set(st.cid, zi);
+                            break;
+                        }
+                    }
                 });
             }
             if (validZones.length === 0) return wheels;
 
-            // Langkah 3A: Ukur tinggi & jari-jari eksak tiap ban HANYA pada kolom sempit tepat di as roda
-            const axleColHalf = 0.04 * L;
-            for (let mi = 0; mi < meshes.length; mi++) {
-                const pos = meshes[mi].geometry.attributes.position;
-                const m2r = meshToRoots[mi];
-                for (let i = 0; i < pos.count; i++) {
-                    v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
-                    if (v.y > min.y + 0.74 * size.y) continue;
-                    const lat = longIsZ ? v.x : v.z;
-                    const lng = longIsZ ? v.z : v.x;
-                    const dLat = lat - midLat;
-                    if (Math.abs(dLat) < 0.40 * W) continue;
-                    for (const z of validZones) {
-                        if (z.side * dLat > 0 && Math.abs(lng - z.cLng) <= axleColHalf) {
-                            if (v.y < z.wMinY) z.wMinY = v.y;
-                            if (v.y > z.wMaxY) z.wMaxY = v.y;
-                        }
-                    }
-                }
-            }
-
-            validZones.forEach((z) => {
-                const radY = (z.wMaxY - z.wMinY) * 0.5;
-                z.exactR = Math.max(radY, 0.04 * L);
-                z.cY = (z.wMinY + z.wMaxY) * 0.5;
-            });
-
-            // Langkah 3B: Ukur lebar eksak tiap ban dari tapak BAWAH ban (bebas dari spoiler/wheel brow di atas ban depan)
-            for (let mi = 0; mi < meshes.length; mi++) {
-                const pos = meshes[mi].geometry.attributes.position;
-                const m2r = meshToRoots[mi];
-                for (let i = 0; i < pos.count; i++) {
-                    v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
-                    const lat = longIsZ ? v.x : v.z;
-                    const lng = longIsZ ? v.z : v.x;
-                    const dLat = lat - midLat;
-                    const absLat = Math.abs(dLat);
-                    if (absLat < 0.28 * W) continue;
-                    for (const z of validZones) {
-                        if (z.side * dLat > 0 &&
-                            Math.abs(lng - z.cLng) <= 0.45 * z.exactR &&
-                            v.y >= z.wMinY - 0.02 * z.exactR &&
-                            v.y <= z.wMinY + 0.16 * z.exactR) {
-                            if (absLat < z.innerAbsLat) z.innerAbsLat = absLat;
-                            if (absLat > z.outerAbsLat) z.outerAbsLat = absLat;
-                        }
-                    }
-                }
-            }
-
-            validZones.forEach((z) => {
-                const outerAbs = Number.isFinite(z.outerAbsLat) ? z.outerAbsLat : 0.50 * W;
-                const rawInner = Number.isFinite(z.innerAbsLat) ? z.innerAbsLat : (outerAbs - 0.18 * W);
-                const innerAbs = Math.max(rawInner, outerAbs - 0.22 * W, 0.285 * W);
-                const cLat = midLat + z.side * (innerAbs + outerAbs) * 0.5;
-                z.center = longIsZ ? new THREE.Vector3(cLat, z.cY, z.cLng) : new THREE.Vector3(z.cLng, z.cY, cLat);
-                z.radius = z.exactR * 1.008;
-                if (z.side > 0) {
-                    z.latMinBound = midLat + innerAbs + 0.004 * W;
-                    z.latMaxBound = midLat + outerAbs + 0.015 * W;
-                } else {
-                    z.latMinBound = midLat - outerAbs - 0.015 * W;
-                    z.latMaxBound = midLat - innerAbs - 0.004 * W;
-                }
-            });
-
-            function classify(pt) {
-                const lat = longIsZ ? pt.x : pt.z;
-                const lng = longIsZ ? pt.z : pt.x;
-                for (let zi = 0; zi < validZones.length; zi++) {
-                    const z = validZones[zi];
-                    if (lat < z.latMinBound || lat > z.latMaxBound) continue;
-                    const dY = pt.y - z.cY;
-                    const dLng = lng - z.cLng;
-                    if (dY * dY + dLng * dLng <= z.radius * z.radius) return zi;
-                }
-                return -1;
-            }
-
             const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
             const n0 = new THREE.Vector3();
 
-            // Langkah 4: Pisahkan segitiga roda dalam ruang LOKAL root
+            // Langkah 4: Pisahkan 100% segitiga komponen roda secara utuh dalam ruang LOKAL root
             for (let mi = 0; mi < meshes.length; mi++) {
                 const mesh = meshes[mi];
                 const m2r = meshToRoots[mi];
@@ -710,6 +760,7 @@
                 const norm = geom.attributes.normal;
                 const uv = geom.attributes.uv;
                 const idx = geom.index;
+                const off = meshOffsets[mi];
                 const triCount = idx ? Math.floor(idx.count / 3) : Math.floor(pos.count / 3);
                 const chassisIdx = [];
                 let moved = false;
@@ -719,14 +770,14 @@
                     const i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
                     const i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
 
-                    v0.fromBufferAttribute(pos, i0).applyMatrix4(m2r);
-                    v1.fromBufferAttribute(pos, i1).applyMatrix4(m2r);
-                    v2.fromBufferAttribute(pos, i2).applyMatrix4(m2r);
-
-                    const z0 = classify(v0);
-                    if (z0 >= 0 && classify(v1) === z0 && classify(v2) === z0) {
+                    const zIdx = compToZone.get(find(off + i0));
+                    if (zIdx !== undefined) {
                         moved = true;
-                        const z = validZones[z0];
+                        const z = validZones[zIdx];
+                        v0.fromBufferAttribute(pos, i0).applyMatrix4(m2r);
+                        v1.fromBufferAttribute(pos, i1).applyMatrix4(m2r);
+                        v2.fromBufferAttribute(pos, i2).applyMatrix4(m2r);
+
                         let bucket = z.trisByMat.get(mesh.material);
                         if (!bucket) {
                             bucket = { pos: [], norm: [], uv: [], hasNorm: !!norm, hasUv: !!uv };
