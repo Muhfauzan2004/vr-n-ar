@@ -6,6 +6,8 @@ const VEHICLES = {
         color: '#0284c7',
         src: './assets/models/redbull_RB19.glb',
         sound: './assets/audio/redbull_sound.mp3',
+        qr: './assets/qr/qr_redbull.png',
+        tag: 'FORMULA 1',
         year: '2023 (Musim Formula 1 2023)',
         drivers: 'Max Verstappen (#1) & Sergio Pérez (#11)',
         hp: '~1.000+ HP',
@@ -22,6 +24,8 @@ const VEHICLES = {
         color: '#e11d48',
         src: './assets/models/ferarri_f1-75.glb',
         sound: './assets/audio/ferrari_sound.mp3',
+        qr: './assets/qr/qr_ferrari.png',
+        tag: 'FORMULA 1',
         year: '2022 (Musim Formula 1 2022)',
         drivers: 'Charles Leclerc (#16) & Carlos Sainz Jr. (#55)',
         hp: '~1.000 HP',
@@ -38,6 +42,8 @@ const VEHICLES = {
         color: '#00a19c',
         src: './assets/models/mercy-w15.glb',
         sound: './assets/audio/mercedes_sound.mp3',
+        qr: './assets/qr/qr_mercedes.png',
+        tag: 'FORMULA 1',
         year: '2024 (Musim Formula 1 2024)',
         drivers: 'Lewis Hamilton (#44) & George Russell (#63)',
         hp: '~1.000+ HP',
@@ -54,6 +60,8 @@ const VEHICLES = {
         color: '#00594f',
         src: './assets/models/f1-amr23.glb',
         sound: './assets/audio/astonmartin_sound.mp3',
+        qr: './assets/qr/qr_astonmartin.png',
+        tag: 'FORMULA 1',
         year: '2023 (Musim Formula 1 2023)',
         drivers: 'Fernando Alonso (#14) & Lance Stroll (#18)',
         hp: '~1.000 HP',
@@ -69,7 +77,9 @@ const VEHICLES = {
         cat: 'Ducati Lenovo • MotoGP',
         color: '#f59e0b',
         src: './assets/models/ducati_desmo.glb',
-        sound: null
+        sound: null,
+        qr: './assets/qr/qr_ducati.png',
+        tag: 'MOTOGP'
     }
 };
 
@@ -1140,6 +1150,68 @@ function finishReset() {
 function goToCircuit() {
     const key = currentActiveModel || 'redbull';
     window.location.href = `./sirkuit.html?model=${encodeURIComponent(key)}`;
+}
+
+// ========================================================
+// MODAL DAFTAR MARKER & QR DIGITAL (SIMULASI SCAN LANGSUNG)
+// ========================================================
+let qrCatalogRendered = false;
+
+function renderQrCatalog() {
+    const listEl = document.getElementById('qr-catalog-list');
+    if (!listEl || qrCatalogRendered) return;
+
+    const fragment = document.createDocumentFragment();
+    Object.entries(VEHICLES).forEach(([key, data]) => {
+        const card = document.createElement('div');
+        card.className = 'qr-item-card';
+
+        const isMoto = key === 'ducati';
+        const safeFilename = `QR_${data.name.replace(/[^A-Za-z0-9]+/g, '_')}.png`;
+
+        card.innerHTML = `
+            <div class="qr-item-top">
+                <span class="qr-item-name">${data.name}</span>
+                <span class="qr-item-tag ${isMoto ? 'motogp' : ''}">${data.tag || 'PATTERN'}</span>
+            </div>
+            <div class="qr-item-preview">
+                <img src="${data.qr}" alt="QR ${data.name}" loading="lazy">
+            </div>
+            <div class="qr-item-caption">Pindai QR Marker ${data.name}</div>
+            <div class="qr-item-actions">
+                <a class="qr-btn-download" href="${data.qr}" download="${safeFilename}">Unduh Marker</a>
+                <button type="button" class="qr-btn-simulate" onclick="simulateQrScan('${key}')">Simulasi Scan</button>
+            </div>
+        `;
+        fragment.appendChild(card);
+    });
+
+    listEl.innerHTML = '';
+    listEl.appendChild(fragment);
+    qrCatalogRendered = true;
+}
+
+function openQrCatalogModal() {
+    renderQrCatalog();
+    const modal = document.getElementById('qr-catalog-modal');
+    if (modal) {
+        modal.classList.add('show');
+    }
+}
+
+function closeQrCatalogModal() {
+    const modal = document.getElementById('qr-catalog-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+function simulateQrScan(key) {
+    if (!VEHICLES[key]) return;
+    unlockAudio();
+    closeQrCatalogModal();
+    flashReticle();
+    switchVehicleTo(key);
 }
 
 // Inisialisasi Saat Halaman Dimuat

@@ -800,3 +800,226 @@ body.rumble {
 .cam-perm-btn:active {
     transform: scale(0.97);
 }
+
+/* ========================================================
+   DIGITAL QR & MARKER SIMULATION MODAL
+======================================================== */
+#qr-catalog-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 160;
+    background: rgba(5, 9, 18, 0.78);
+    backdrop-filter: blur(8px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+#qr-catalog-modal.show {
+    display: flex;
+}
+
+.qr-modal-box {
+    background: #1b2333;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    animation: modalPopIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.qr-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #1e2738;
+    flex-shrink: 0;
+}
+
+.qr-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.qr-modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s ease, transform 0.15s ease;
+}
+
+.qr-modal-close:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+.qr-modal-close:active {
+    transform: scale(0.92);
+}
+
+.qr-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.qr-modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.qr-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 6px;
+}
+
+.qr-item-card {
+    background: #131a29;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.qr-item-top {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.qr-item-name {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #f8fafc;
+    text-align: left;
+}
+
+.qr-item-tag {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgba(52, 179, 122, 0.14);
+    border: 1px solid rgba(52, 179, 122, 0.45);
+    color: #4ade80;
+    white-space: nowrap;
+}
+
+.qr-item-tag.motogp {
+    background: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+}
+
+.qr-item-preview {
+    background: #ffffff;
+    padding: 14px;
+    border-radius: 16px;
+    margin: 14px 0 10px 0;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-item-preview img {
+    width: 168px;
+    height: 168px;
+    display: block;
+    border-radius: 4px;
+}
+
+.qr-item-caption {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-bottom: 14px;
+    text-align: center;
+}
+
+.qr-item-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.qr-btn-download,
+.qr-btn-simulate {
+    padding: 11px 12px;
+    border-radius: 12px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-btn-download {
+    background: #273144;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f8fafc;
+}
+
+.qr-btn-download:hover {
+    background: #323e54;
+}
+
+.qr-btn-simulate {
+    background: linear-gradient(135deg, #2ea873, #3bc085);
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(52, 179, 122, 0.35);
+}
+
+.qr-btn-simulate:hover {
+    filter: brightness(1.06);
+}
+
+.qr-btn-download:active,
+.qr-btn-simulate:active {
+    transform: scale(0.96);
+}
