@@ -166,6 +166,7 @@ if (mainViewer) {
         if (currentActiveModel) {
             loadedModelKeys.add(currentActiveModel);
         }
+        setupARWheelSpin();
         console.log(`✅ Model 3D berhasil dimuat ke GPU!`);
     });
 
@@ -173,6 +174,331 @@ if (mainViewer) {
         hideLoader();
         console.warn('Model loading error:', err);
     });
+}
+
+// ========================================================
+// ANIMASI RODA BERPUTAR REALISTIS PADA MODEL 3D AR (<model-viewer>)
+// ========================================================
+let arWheelPivots = [];
+let arWheelScene = null;
+let arWheelRaf = null;
+let arWheelLastTime = 0;
+
+function stopARWheelSpin() {
+    if (arWheelRaf) {
+        cancelAnimationFrame(arWheelRaf);
+        arWheelRaf = null;
+    }
+    arWheelPivots = [];
+    arWheelScene = null;
+}
+
+function getMeshLocalBox(obj, Vec3) {
+    const min = new Vec3(Infinity, Infinity, Infinity);
+    const max = new Vec3(-Infinity, -Infinity, -Infinity);
+    const v = new Vec3();
+    let count = 0;
+    obj.updateMatrixWorld(true);
+    obj.traverse((child) => {
+        if (!child.isMesh || !child.geometry || !child.geometry.attributes || !child.geometry.attributes.position) return;
+        const pos = child.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(child.matrixWorld);
+            if (v.x < min.x) min.x = v.x;
+            if (v.y < min.y) min.y = v.y;
+            if (v.z < min.z) min.z = v.z;
+            if (v.x > max.x) max.x = v.x;
+            if (v.y > max.y) max.y = v.y;
+            if (v.z > max.z) max.z = v.z;
+            count++;
+        }
+    });
+    return count > 0 ? { min, max } : null;
+}
+
+function repivotARObject(obj, parent, Vec3, GroupCtor) {
+    const box = getMeshLocalBox(obj, Vec3);
+    if (!box || !parent) return null;
+    parent.updateMatrixWorld(true);
+    const worldCenter = new Vec3(
+        (box.min.x + box.max.x) * 0.5,
+        (box.min.y + box.max.y) * 0.5,
+        (box.min.z + box.max.z) * 0.5
+    );
+    const localCenter = worldCenter.clone();
+    parent.worldToLocal(localCenter);
+
+    const pivot = new GroupCtor();
+    pivot.position.copy(localCenter);
+    parent.add(pivot);
+
+    // Pindahkan obj ke dalam pivot sambil mempertahankan posisi dunia aktualnya
+    if (typeof pivot.attach === 'function') {
+        pivot.attach(obj);
+    } else {
+        obj.position.sub(localCenter);
+        pivot.add(obj);
+    }
+    return { pivot, box };
+}
+
+function extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, AttrCtor) {
+    const wheels = [];
+    const carBox = getMeshLocalBox(root, Vec3);
+    if (!carBox) return wheels;
+
+    const sizeX = carBox.max.x - carBox.min.x;
+    const sizeY = carBox.max.y - carBox.min.y;
+    const sizeZ = carBox.max.z - carBox.min.z;
+    const longIsZ = sizeZ >= sizeX;
+    const W = longIsZ ? sizeX : sizeZ;
+    const L = longIsZ ? sizeZ : sizeX;
+    const midLat = longIsZ ? (carBox.min.x + carBox.max.x) * 0.5 : (carBox.min.z + carBox.max.z) * 0.5;
+    const minLong = longIsZ ? carBox.min.z : carBox.min.x;
+    const minY = carBox.min.y;
+
+    const meshes = [];
+    root.updateMatrixWorld(true);
+    root.traverse((c) => {
+        if (c.isMesh && c.geometry && c.geometry.attributes && c.geometry.attributes.position) {
+            meshes.push(c);
+        }
+    });
+    if (meshes.length === 0) return wheels;
+
+    // 4 zona roda F1: Rear-Left, Rear-Right, Front-Left, Front-Right
+    const zones = [
+        { side: -1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
+        { side:  1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
+        { side: -1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L },
+        { side:  1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L }
+    ];
+
+    const v = new Vec3();
+    // Langkah 1: Hitung bounding box & titik pusat as roda masing-masing kuadran
+    zones.forEach((z) => {
+        z.min = new Vec3(Infinity, Infinity, Infinity);
+        z.max = new Vec3(-Infinity, -Infinity, -Infinity);
+        z.count = 0;
+    });
+
+    for (const mesh of meshes) {
+        const pos = mesh.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+            const lat = (longIsZ ? v.x : v.z) - midLat;
+            const lng = longIsZ ? v.z : v.x;
+            if (v.y > minY + 0.62 * sizeY) continue;
+            for (const z of zones) {
+                if (z.side * lat > 0.24 * W && lng >= z.l0 && lng <= z.l1) {
+                    if (v.x < z.min.x) z.min.x = v.x;
+                    if (v.y < z.min.y) z.min.y = v.y;
+                    if (v.z < z.min.z) z.min.z = v.z;
+                    if (v.x > z.max.x) z.max.x = v.x;
+                    if (v.y > z.max.y) z.max.y = v.y;
+                    if (v.z > z.max.z) z.max.z = v.z;
+                    z.count++;
+                }
+            }
+        }
+    }
+
+    const validZones = zones.filter((z) => z.count > 40);
+    if (validZones.length === 0) return wheels;
+
+    validZones.forEach((z) => {
+        z.center = new Vec3(
+            (z.min.x + z.max.x) * 0.5,
+            (z.min.y + z.max.y) * 0.5,
+            (z.min.z + z.max.z) * 0.5
+        );
+        z.radius = Math.max((z.max.y - z.min.y) * 0.5, 0.05) * 1.08;
+        z.halfW = Math.max(((longIsZ ? (z.max.x - z.min.x) : (z.max.z - z.min.z)) * 0.5), 0.05) * 1.06;
+        z.trisByMat = new Map();
+    });
+
+    function classifyPoint(pt) {
+        for (let zi = 0; zi < validZones.length; zi++) {
+            const z = validZones[zi];
+            const dLat = Math.abs((longIsZ ? pt.x : pt.z) - (longIsZ ? z.center.x : z.center.z));
+            if (dLat > z.halfW) continue;
+            const dY = pt.y - z.center.y;
+            const dLng = (longIsZ ? pt.z : pt.x) - (longIsZ ? z.center.z : z.center.x);
+            if (dY * dY + dLng * dLng <= z.radius * z.radius) return zi;
+        }
+        return -1;
+    }
+
+    const v0 = new Vec3(), v1 = new Vec3(), v2 = new Vec3();
+    const n0 = new Vec3();
+
+    // Langkah 2: Pisahkan segitiga roda dari bodi chassis
+    for (const mesh of meshes) {
+        const geom = mesh.geometry;
+        const pos = geom.attributes.position;
+        const norm = geom.attributes.normal;
+        const uv = geom.attributes.uv;
+        const idx = geom.index;
+        const triCount = idx ? Math.floor(idx.count / 3) : Math.floor(pos.count / 3);
+
+        const chassisIdx = [];
+        let movedAny = false;
+
+        for (let t = 0; t < triCount; t++) {
+            const i0 = idx ? idx.getX(t * 3) : t * 3;
+            const i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
+            const i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+
+            v0.fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld);
+            v1.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld);
+            v2.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
+
+            const z0 = classifyPoint(v0);
+            if (z0 >= 0 && classifyPoint(v1) === z0 && classifyPoint(v2) === z0) {
+                movedAny = true;
+                const z = validZones[z0];
+                let bucket = z.trisByMat.get(mesh.material);
+                if (!bucket) {
+                    bucket = { pos: [], norm: [], uv: [], hasNorm: !!norm, hasUv: !!uv };
+                    z.trisByMat.set(mesh.material, bucket);
+                }
+                const verts = [v0, v1, v2];
+                const inds = [i0, i1, i2];
+                for (let k = 0; k < 3; k++) {
+                    bucket.pos.push(
+                        verts[k].x - z.center.x,
+                        verts[k].y - z.center.y,
+                        verts[k].z - z.center.z
+                    );
+                    if (norm) {
+                        n0.fromBufferAttribute(norm, inds[k]).transformDirection(mesh.matrixWorld);
+                        bucket.norm.push(n0.x, n0.y, n0.z);
+                    }
+                    if (uv) {
+                        bucket.uv.push(uv.getX(inds[k]), uv.getY(inds[k]));
+                    }
+                }
+            } else {
+                chassisIdx.push(i0, i1, i2);
+            }
+        }
+
+        if (movedAny) {
+            geom.setIndex(chassisIdx);
+        }
+    }
+
+    // Langkah 3: Buat 4 Pivot Group roda tepat di titik as masing-masing
+    const invRoot = root.matrixWorld.clone().invert();
+    for (const z of validZones) {
+        if (z.trisByMat.size === 0) continue;
+        const pivot = new GroupCtor();
+        const localCenter = z.center.clone().applyMatrix4(invRoot);
+        pivot.position.copy(localCenter);
+
+        // Skala kompensasi agar geometri dunia cocok di ruang lokal root
+        const sx = Math.hypot(root.matrixWorld.elements[0], root.matrixWorld.elements[1], root.matrixWorld.elements[2]) || 1;
+        const sy = Math.hypot(root.matrixWorld.elements[4], root.matrixWorld.elements[5], root.matrixWorld.elements[6]) || 1;
+        const sz = Math.hypot(root.matrixWorld.elements[8], root.matrixWorld.elements[9], root.matrixWorld.elements[10]) || 1;
+        pivot.scale.set(1 / sx, 1 / sy, 1 / sz);
+
+        z.trisByMat.forEach((bucket, mat) => {
+            const g = new GeomCtor();
+            g.setAttribute('position', new AttrCtor(new Float32Array(bucket.pos), 3));
+            if (bucket.hasNorm && bucket.norm.length > 0) {
+                g.setAttribute('normal', new AttrCtor(new Float32Array(bucket.norm), 3));
+            } else {
+                g.computeVertexNormals();
+            }
+            if (bucket.hasUv && bucket.uv.length > 0) {
+                g.setAttribute('uv', new AttrCtor(new Float32Array(bucket.uv), 2));
+            }
+            const wMesh = new MeshCtor(g, mat);
+            wMesh.castShadow = true;
+            wMesh.receiveShadow = true;
+            pivot.add(wMesh);
+        });
+
+        root.add(pivot);
+        wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', dir: 1 });
+    }
+
+    return wheels;
+}
+
+function setupARWheelSpin() {
+    stopARWheelSpin();
+    if (!mainViewer || !currentActiveModel) return;
+    try {
+        const sceneSym = Object.getOwnPropertySymbols(mainViewer).find((s) => s.description === 'scene');
+        if (!sceneSym) return;
+        const mvScene = mainViewer[sceneSym];
+        if (!mvScene || !mvScene.model) return;
+
+        const root = mvScene.model;
+        let sampleMesh = null;
+        root.traverse((c) => { if (!sampleMesh && c.isMesh) sampleMesh = c; });
+        if (!sampleMesh) return;
+
+        const Vec3 = sampleMesh.position.constructor;
+        const GroupCtor = root.constructor;
+        const MeshCtor = sampleMesh.constructor;
+        const GeomCtor = sampleMesh.geometry.constructor;
+        const AttrCtor = sampleMesh.geometry.attributes.position.constructor;
+
+        const pivots = [];
+
+        if (currentActiveModel === 'ferrari') {
+            const wheelNodes = [];
+            root.traverse((c) => {
+                if (c.name && /^WHEEL_(LF|RF|LR|RR)/i.test(c.name)) wheelNodes.push(c);
+            });
+            wheelNodes.forEach((wn) => {
+                const res = repivotARObject(wn, wn.parent, Vec3, GroupCtor);
+                if (res) pivots.push({ pivot: res.pivot, axis: 'x', dir: 1 });
+            });
+        } else if (currentActiveModel === 'ducati') {
+            const wheelMeshes = [];
+            root.traverse((c) => {
+                if (c.isMesh && c.material && c.material.name === 'Part8_Mat') wheelMeshes.push(c);
+            });
+            wheelMeshes.forEach((wm) => {
+                const res = repivotARObject(wm, wm.parent, Vec3, GroupCtor);
+                if (res) {
+                    const sx = res.box.max.x - res.box.min.x;
+                    const sz = res.box.max.z - res.box.min.z;
+                    pivots.push({ pivot: res.pivot, axis: sx <= sz ? 'x' : 'z', dir: 1 });
+                }
+            });
+        } else {
+            const baked = extractBakedWheelsGeneric(root, Vec3, GroupCtor, MeshCtor, GeomCtor, AttrCtor);
+            pivots.push(...baked);
+        }
+
+        if (pivots.length > 0) {
+            arWheelPivots = pivots;
+            arWheelScene = mvScene;
+            arWheelLastTime = performance.now();
+            const spinLoop = (now) => {
+                if (!arWheelScene || arWheelPivots.length === 0) return;
+                const dt = Math.min(0.05, (now - arWheelLastTime) / 1000);
+                arWheelLastTime = now;
+                const spinStep = dt * 11.5; // Putaran roda stabil seperti mobil melaju
+                for (let i = 0; i < arWheelPivots.length; i++) {
+                    const w = arWheelPivots[i];
+                    w.pivot.rotation[w.axis] += spinStep * w.dir;
+                }
+                if (typeof arWheelScene.queueRender === 'function') {
+                    arWheelScene.queueRender();
+                }
+                arWheelRaf = requestAnimationFrame(spinLoop);
+            };
+            arWheelRaf = requestAnimationFrame(spinLoop);
+            console.log(`🛞 Animasi roda berputar aktif (${pivots.length} roda) di AR Viewer!`);
+        }
+    } catch (e) {
+        console.warn('AR wheel spin skipped:', e);
+    }
 }
 
 function showLoader(vehicleName) {
@@ -513,15 +839,51 @@ function flashReticle() {
     }
 }
 
+// Tampilkan / Sembunyikan Layar Izin Kamera (AR Explorer Style)
+function showCameraPermissionScreen(errorMsg = '') {
+    const screen = document.getElementById('camera-permission-screen');
+    const note = document.getElementById('camera-perm-note');
+    if (screen) screen.classList.remove('hidden');
+    if (note) {
+        if (errorMsg) {
+            note.innerText = errorMsg;
+            note.classList.add('show');
+        } else {
+            note.innerText = '';
+            note.classList.remove('show');
+        }
+    }
+}
+
+function hideCameraPermissionScreen() {
+    const screen = document.getElementById('camera-permission-screen');
+    const note = document.getElementById('camera-perm-note');
+    if (screen) screen.classList.add('hidden');
+    if (note) {
+        note.innerText = '';
+        note.classList.remove('show');
+    }
+}
+
+async function requestCameraAndStart() {
+    unlockAudio();
+    const ok = await startCamera();
+    if (ok && !currentActiveModel && soundEnabled) {
+        startF1Theme();
+    }
+}
+
 // Menyalakan Kamera HP dengan Continuous Autofocus & Macro
 async function startCamera() {
-    document.getElementById('camera-error').style.display = 'none';
     if (videoStream) {
         videoStream.getTracks().forEach(t => t.stop());
         videoStream = null;
     }
 
     try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Browser tidak mendukung akses kamera.');
+        }
         const constraints = {
             video: {
                 facingMode: currentFacingMode,
@@ -538,14 +900,18 @@ async function startCamera() {
         video.srcObject = videoStream;
         await video.play();
 
+        hideCameraPermissionScreen();
+
         // Cek ketersediaan tombol lampu senter / torch
         checkTorchSupport();
 
         isScanning = true;
         requestAnimationFrame(scanLoop);
+        return true;
     } catch (err) {
         console.warn('Camera error:', err);
-        document.getElementById('camera-error').style.display = 'flex';
+        showCameraPermissionScreen('Akses kamera belum diizinkan. Mohon izinkan kamera pada browser Anda lalu tekan tombol di bawah.');
+        return false;
     }
 }
 
@@ -749,6 +1115,7 @@ function resetToScanner() {
 }
 
 function finishReset() {
+    stopARWheelSpin();
     currentActiveModel = null;
     hideLoader();
     if (mainViewer) {
@@ -776,17 +1143,35 @@ function goToCircuit() {
 }
 
 // Inisialisasi Saat Halaman Dimuat
-window.addEventListener('DOMContentLoaded', () => {
-    startCamera();
-
+window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     const rawParam = params.get('model') || params.get('mobil') || params.get('car') || '';
     const matchedKey = resolveModelKey(rawParam);
+
+    // Cek status izin kamera terlebih dahulu:
+    // Jika sudah pernah diizinkan -> langsung nyalakan kamera.
+    // Jika belum dapat akses kamera -> tampilkan layar izin kamera AR Explorer.
+    let alreadyGranted = false;
+    if (navigator.permissions && navigator.permissions.query) {
+        try {
+            const status = await navigator.permissions.query({ name: 'camera' });
+            alreadyGranted = (status.state === 'granted');
+        } catch (e) {
+            alreadyGranted = false;
+        }
+    }
+
+    if (alreadyGranted) {
+        await startCamera();
+    } else {
+        showCameraPermissionScreen();
+    }
+
     if (matchedKey) {
         setTimeout(() => {
             switchVehicleTo(matchedKey);
         }, 500);
-    } else {
+    } else if (alreadyGranted) {
         // Di tampilan awal sebelum discan, putar theme song F1
         startF1Theme();
     }

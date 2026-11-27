@@ -632,49 +632,113 @@ body.rumble {
     transform: translateX(-50%) translateY(0);
 }
 
-/* Camera Error Modal */
-#camera-error {
+/* Camera Permission & Error Screen (AR Explorer Style) */
+#camera-permission-screen {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    display: none;
+    background: radial-gradient(circle at 50% 35%, #162033 0%, #0d1320 100%);
+    display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
     z-index: 200;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
+    transition: opacity 0.3s ease;
 }
 
-.error-card {
-    background: #111827;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
-    padding: 24px 20px;
-    max-width: 340px;
+#camera-permission-screen.hidden {
+    display: none;
+}
+
+.cam-perm-card {
+    background: #1b2333;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 26px;
+    padding: 36px 28px 30px 28px;
+    max-width: 420px;
+    width: 100%;
     text-align: center;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
 }
 
-.error-card h3 {
-    margin: 0 0 10px 0;
-    color: #f87171;
-    font-size: 1.1rem;
+.cam-perm-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    margin: 0 auto 22px auto;
+    background: rgba(52, 179, 122, 0.12);
+    border: 1.5px solid rgba(52, 179, 122, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #34b37a;
 }
 
-.error-card p {
-    font-size: 0.85rem;
-    color: #cbd5e1;
-    margin: 0 0 18px 0;
-    line-height: 1.5;
+.cam-perm-icon svg {
+    width: 30px;
+    height: 30px;
 }
 
-.error-btn {
-    background: #0284c7;
-    color: #fff;
+.cam-perm-card h2 {
+    margin: 0 0 14px 0;
+    color: #ffffff;
+    font-size: 1.48rem;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+}
+
+.cam-perm-card p {
+    font-size: 0.92rem;
+    color: #94a3b8;
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+}
+
+.cam-perm-note {
+    display: none;
+    font-size: 0.8rem !important;
+    color: #fca5a5 !important;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin: -10px 0 20px 0 !important;
+}
+
+.cam-perm-note.show {
+    display: block;
+}
+
+.cam-perm-btn {
+    background: linear-gradient(135deg, #2ea873, #3bc085);
+    color: #ffffff;
     border: none;
-    padding: 10px 24px;
-    border-radius: 20px;
-    font-size: 0.85rem;
+    padding: 15px 22px;
+    border-radius: 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.96rem;
     font-weight: 700;
     cursor: pointer;
     width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 8px 26px rgba(52, 179, 122, 0.42);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.cam-perm-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.cam-perm-btn:hover {
+    filter: brightness(1.06);
+    box-shadow: 0 10px 30px rgba(52, 179, 122, 0.55);
+}
+
+.cam-perm-btn:active {
+    transform: scale(0.97);
 }

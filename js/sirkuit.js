@@ -505,10 +505,232 @@
                 const w = new THREE.Mesh(wheelGeo, blackMat);
                 w.position.set(pos[0], pos[1], pos[2]);
                 w.castShadow = true;
+                w.userData.isFallbackWheel = true;
                 group.add(w);
             });
 
             return group;
+        }
+
+        // ========================================================
+        // SISTEM ANIMASI RODA BERPUTAR 3D REALISTIS DI SIRKUIT
+        // ========================================================
+        let spinningWheels = [];
+
+        function repivotCircuitWheel(obj) {
+            const parent = obj.parent;
+            if (!parent) return null;
+            obj.updateMatrixWorld(true);
+            parent.updateMatrixWorld(true);
+
+            const box = new THREE.Box3().setFromObject(obj);
+            if (box.isEmpty()) return null;
+
+            const worldCenter = box.getCenter(new THREE.Vector3());
+            const localCenter = parent.worldToLocal(worldCenter.clone());
+
+            const pivot = new THREE.Group();
+            pivot.position.copy(localCenter);
+            parent.add(pivot);
+            pivot.attach(obj);
+
+            const size = box.getSize(new THREE.Vector3());
+            return { pivot, size };
+        }
+
+        function extractBakedCircuitWheels(root) {
+            const wheels = [];
+            root.updateMatrixWorld(true);
+            const carBox = new THREE.Box3().setFromObject(root);
+            const size = carBox.getSize(new THREE.Vector3());
+            const center = carBox.getCenter(new THREE.Vector3());
+            const min = carBox.min;
+
+            const longIsZ = size.z >= size.x;
+            const W = longIsZ ? size.x : size.z;
+            const L = longIsZ ? size.z : size.x;
+            const midLat = longIsZ ? center.x : center.z;
+            const minLong = longIsZ ? min.z : min.x;
+
+            const meshes = [];
+            root.traverse((c) => {
+                if (c.isMesh && c.geometry && c.geometry.attributes && c.geometry.attributes.position) {
+                    meshes.push(c);
+                }
+            });
+
+            // 4 kuadran roda F1 (Belakang Kiri/Kanan & Depan Kiri/Kanan)
+            const zones = [
+                { side: -1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
+                { side:  1, l0: minLong + 0.08 * L, l1: minLong + 0.27 * L },
+                { side: -1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L },
+                { side:  1, l0: minLong + 0.64 * L, l1: minLong + 0.83 * L }
+            ];
+            zones.forEach((z) => {
+                z.box = new THREE.Box3();
+                z.count = 0;
+                z.trisByMat = new Map();
+            });
+
+            const v = new THREE.Vector3();
+            for (const mesh of meshes) {
+                const pos = mesh.geometry.attributes.position;
+                for (let i = 0; i < pos.count; i++) {
+                    v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+                    if (v.y > min.y + 0.62 * size.y) continue;
+                    const lat = (longIsZ ? v.x : v.z) - midLat;
+                    const lng = longIsZ ? v.z : v.x;
+                    for (const z of zones) {
+                        if (z.side * lat > 0.24 * W && lng >= z.l0 && lng <= z.l1) {
+                            z.box.expandByPoint(v);
+                            z.count++;
+                        }
+                    }
+                }
+            }
+
+            const validZones = zones.filter((z) => z.count > 40);
+            if (validZones.length === 0) return wheels;
+
+            validZones.forEach((z) => {
+                z.center = z.box.getCenter(new THREE.Vector3());
+                const zSize = z.box.getSize(new THREE.Vector3());
+                z.radius = Math.max(zSize.y * 0.5, 0.05) * 1.08;
+                z.halfW = Math.max((longIsZ ? zSize.x : zSize.z) * 0.5, 0.05) * 1.06;
+            });
+
+            function classify(pt) {
+                for (let zi = 0; zi < validZones.length; zi++) {
+                    const z = validZones[zi];
+                    const dLat = Math.abs((longIsZ ? pt.x : pt.z) - (longIsZ ? z.center.x : z.center.z));
+                    if (dLat > z.halfW) continue;
+                    const dY = pt.y - z.center.y;
+                    const dLng = (longIsZ ? pt.z : pt.x) - (longIsZ ? z.center.z : z.center.x);
+                    if (dY * dY + dLng * dLng <= z.radius * z.radius) return zi;
+                }
+                return -1;
+            }
+
+            const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
+            const n0 = new THREE.Vector3();
+
+            for (const mesh of meshes) {
+                const geom = mesh.geometry;
+                const pos = geom.attributes.position;
+                const norm = geom.attributes.normal;
+                const uv = geom.attributes.uv;
+                const idx = geom.index;
+                const triCount = idx ? Math.floor(idx.count / 3) : Math.floor(pos.count / 3);
+                const chassisIdx = [];
+                let moved = false;
+
+                for (let t = 0; t < triCount; t++) {
+                    const i0 = idx ? idx.getX(t * 3) : t * 3;
+                    const i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
+                    const i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+
+                    v0.fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld);
+                    v1.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld);
+                    v2.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
+
+                    const z0 = classify(v0);
+                    if (z0 >= 0 && classify(v1) === z0 && classify(v2) === z0) {
+                        moved = true;
+                        const z = validZones[z0];
+                        let bucket = z.trisByMat.get(mesh.material);
+                        if (!bucket) {
+                            bucket = { pos: [], norm: [], uv: [], hasNorm: !!norm, hasUv: !!uv };
+                            z.trisByMat.set(mesh.material, bucket);
+                        }
+                        const verts = [v0, v1, v2];
+                        const inds = [i0, i1, i2];
+                        for (let k = 0; k < 3; k++) {
+                            bucket.pos.push(verts[k].x - z.center.x, verts[k].y - z.center.y, verts[k].z - z.center.z);
+                            if (norm) {
+                                n0.fromBufferAttribute(norm, inds[k]).transformDirection(mesh.matrixWorld);
+                                bucket.norm.push(n0.x, n0.y, n0.z);
+                            }
+                            if (uv) bucket.uv.push(uv.getX(inds[k]), uv.getY(inds[k]));
+                        }
+                    } else {
+                        chassisIdx.push(i0, i1, i2);
+                    }
+                }
+
+                if (moved) {
+                    geom.setIndex(chassisIdx);
+                }
+            }
+
+            const invRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+            const sx = root.scale.x || 1;
+            const sy = root.scale.y || 1;
+            const sz = root.scale.z || 1;
+
+            for (const z of validZones) {
+                if (z.trisByMat.size === 0) continue;
+                const pivot = new THREE.Group();
+                pivot.position.copy(z.center).applyMatrix4(invRoot);
+                pivot.scale.set(1 / sx, 1 / sy, 1 / sz);
+
+                z.trisByMat.forEach((bucket, mat) => {
+                    const g = new THREE.BufferGeometry();
+                    g.setAttribute('position', new THREE.Float32BufferAttribute(bucket.pos, 3));
+                    if (bucket.hasNorm && bucket.norm.length > 0) {
+                        g.setAttribute('normal', new THREE.Float32BufferAttribute(bucket.norm, 3));
+                    } else {
+                        g.computeVertexNormals();
+                    }
+                    if (bucket.hasUv && bucket.uv.length > 0) {
+                        g.setAttribute('uv', new THREE.Float32BufferAttribute(bucket.uv, 2));
+                    }
+                    const wMesh = new THREE.Mesh(g, mat);
+                    wMesh.castShadow = true;
+                    wMesh.receiveShadow = true;
+                    pivot.add(wMesh);
+                });
+
+                root.add(pivot);
+                wheels.push({ pivot, axis: longIsZ ? 'x' : 'z', dir: 1 });
+            }
+
+            return wheels;
+        }
+
+        function setupCircuitWheels(root, carKey) {
+            spinningWheels = [];
+            try {
+                if (carKey === 'ferrari') {
+                    const wheelNodes = [];
+                    root.traverse((c) => {
+                        if (c.name && /^WHEEL_(LF|RF|LR|RR)/i.test(c.name)) wheelNodes.push(c);
+                    });
+                    wheelNodes.forEach((wn) => {
+                        const res = repivotCircuitWheel(wn);
+                        if (res) spinningWheels.push({ pivot: res.pivot, axis: 'x', dir: 1 });
+                    });
+                } else if (carKey === 'ducati') {
+                    const wheelMeshes = [];
+                    root.traverse((c) => {
+                        if (c.isMesh && c.material && c.material.name === 'Part8_Mat') wheelMeshes.push(c);
+                    });
+                    wheelMeshes.forEach((wm) => {
+                        const res = repivotCircuitWheel(wm);
+                        if (res) spinningWheels.push({ pivot: res.pivot, axis: res.size.x <= res.size.z ? 'x' : 'z', dir: 1 });
+                    });
+                } else {
+                    const fallbackWheels = [];
+                    root.traverse((c) => { if (c.userData && c.userData.isFallbackWheel) fallbackWheels.push(c); });
+                    if (fallbackWheels.length > 0) {
+                        fallbackWheels.forEach((fw) => spinningWheels.push({ pivot: fw, axis: 'x', dir: 1 }));
+                    } else {
+                        spinningWheels = extractBakedCircuitWheels(root);
+                    }
+                }
+                console.log(`🛞 Roda berputar aktif di sirkuit (${spinningWheels.length} roda)`);
+            } catch (e) {
+                console.warn('Circuit wheel setup skipped:', e);
+            }
         }
 
         // 2. Memuat Model 3D Mobil Formula 1
@@ -530,6 +752,8 @@
                 }
             });
 
+            setupCircuitWheels(carModel, selectedCarKey);
+
             scene.add(carModel);
             carLoaded = true;
             checkLoadComplete();
@@ -541,6 +765,7 @@
         }, (err) => {
             console.warn('Gagal memuat mobil utama, menggunakan mobil cadangan:', err);
             carModel = createFallbackCar(carData.color || 0xe10600);
+            setupCircuitWheels(carModel, 'fallback');
             scene.add(carModel);
             carLoaded = true;
             checkLoadComplete();
@@ -853,6 +1078,15 @@
                 if (Math.abs(steeringVisualAngle) > 0.005) {
                     carModel.rotateY(-steeringVisualAngle * 0.35);
                     carModel.rotateZ(-steeringVisualAngle * 0.10);
+                }
+
+                // Animasi putaran roda 3D sinkron dengan kecepatan mobil (km/h)
+                if (spinningWheels.length > 0 && currentSpeedKmh > 1) {
+                    const wheelSpinStep = ((currentSpeedKmh / 3.6) / 0.34) * Math.min(delta, 0.05) * 0.35;
+                    for (let i = 0; i < spinningWheels.length; i++) {
+                        const w = spinningWheels[i];
+                        w.pivot.rotation[w.axis] += wheelSpinStep * w.dir;
+                    }
                 }
 
                 // Update Telemetry Speedometer aktual
