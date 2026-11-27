@@ -576,11 +576,12 @@
             const midLong = longIsZ ? center.z : center.x;
 
             // Langkah 2: Deteksi eksak 4 tapak ban paling bawah yang menyentuh aspal
-            const patches = [
-                { side: -1, sumLat: 0, sumLng: 0, count: 0 },
-                { side:  1, sumLat: 0, sumLng: 0, count: 0 },
-                { side: -1, sumLat: 0, sumLng: 0, count: 0 },
-                { side:  1, sumLat: 0, sumLng: 0, count: 0 }
+            // Langkah 2: Deteksi tepat 4 roda HANYA dari pita dinding samping luar ban (|dLat| >= 0.42*W, y di 30%-65% tinggi)
+            const quads = [
+                { side: -1, end: -1, minLng: Infinity, maxLng: -Infinity, count: 0 },
+                { side:  1, end: -1, minLng: Infinity, maxLng: -Infinity, count: 0 },
+                { side: -1, end:  1, minLng: Infinity, maxLng: -Infinity, count: 0 },
+                { side:  1, end:  1, minLng: Infinity, maxLng: -Infinity, count: 0 }
             ];
 
             for (let mi = 0; mi < meshes.length; mi++) {
@@ -588,74 +589,106 @@
                 const m2r = meshToRoots[mi];
                 for (let i = 0; i < pos.count; i++) {
                     v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
-                    if (v.y > min.y + 0.10 * size.y) continue;
+                    const relY = (v.y - min.y) / size.y;
+                    if (relY < 0.30 || relY > 0.65) continue;
                     const lat = longIsZ ? v.x : v.z;
                     const lng = longIsZ ? v.z : v.x;
                     const dLat = lat - midLat;
                     const dLng = lng - midLong;
-                    if (Math.abs(dLat) < 0.28 * W) continue;
+                    if (Math.abs(dLat) < 0.42 * W) continue;
+                    if (Math.abs(dLng) > 0.44 * L) continue;
                     const idx = (dLng >= 0 ? 2 : 0) + (dLat >= 0 ? 1 : 0);
-                    patches[idx].sumLat += lat;
-                    patches[idx].sumLng += lng;
-                    patches[idx].count++;
+                    const q = quads[idx];
+                    if (lng < q.minLng) q.minLng = lng;
+                    if (lng > q.maxLng) q.maxLng = lng;
+                    q.count++;
                 }
             }
 
             const validZones = [];
-            for (const p of patches) {
-                if (p.count < 10) continue;
+            for (const q of quads) {
+                if (q.count < 10) continue;
+                const rawCLng = (q.minLng + q.maxLng) * 0.5;
+                const rawR = Math.max((q.maxLng - q.minLng) * 0.5, 0.04 * L);
                 validZones.push({
-                    side: p.side,
-                    patchLat: p.sumLat / p.count,
-                    patchLng: p.sumLng / p.count,
-                    minLat: Infinity, maxLat: -Infinity,
-                    minY: Infinity, maxY: -Infinity,
-                    minLng: Infinity, maxLng: -Infinity,
+                    side: q.side,
+                    rawCLng,
+                    rawR,
+                    wMinY: Infinity, wMaxY: -Infinity,
+                    wMinLng: Infinity, wMaxLng: -Infinity,
+                    innerAbsLat: Infinity, outerAbsLat: -Infinity,
                     trisByMat: new Map()
                 });
             }
             if (validZones.length === 0) return wheels;
 
-            // Langkah 3: Ukur jari-jari & lebar eksak tiap ban di sekitar tapaknya
-            const searchHalfLng = 0.085 * L;
-            const searchHalfLat = 0.18 * W;
+            // Langkah 3A: Ukur batas vertikal & longitudinal eksak tiap ban di sisi luarnya
             for (let mi = 0; mi < meshes.length; mi++) {
                 const pos = meshes[mi].geometry.attributes.position;
                 const m2r = meshToRoots[mi];
                 for (let i = 0; i < pos.count; i++) {
                     v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
-                    if (v.y > min.y + 0.68 * size.y) continue;
+                    if (v.y > min.y + 0.74 * size.y) continue;
                     const lat = longIsZ ? v.x : v.z;
                     const lng = longIsZ ? v.z : v.x;
-                    if (Math.abs(lat - midLat) < 0.24 * W) continue;
+                    const dLat = lat - midLat;
+                    if (Math.abs(dLat) < 0.40 * W) continue;
                     for (const z of validZones) {
-                        if (z.side * (lat - midLat) > 0 &&
-                            Math.abs(lng - z.patchLng) <= searchHalfLng &&
-                            Math.abs(lat - z.patchLat) <= searchHalfLat) {
-                            if (lat < z.minLat) z.minLat = lat;
-                            if (lat > z.maxLat) z.maxLat = lat;
-                            if (v.y < z.minY) z.minY = v.y;
-                            if (v.y > z.maxY) z.maxY = v.y;
-                            if (lng < z.minLng) z.minLng = lng;
-                            if (lng > z.maxLng) z.maxLng = lng;
+                        if (z.side * dLat > 0 && Math.abs(lng - z.rawCLng) <= z.rawR * 1.15) {
+                            if (v.y < z.wMinY) z.wMinY = v.y;
+                            if (v.y > z.wMaxY) z.wMaxY = v.y;
+                            if (lng < z.wMinLng) z.wMinLng = lng;
+                            if (lng > z.wMaxLng) z.wMaxLng = lng;
                         }
                     }
                 }
             }
 
             validZones.forEach((z) => {
-                const cLat = (z.minLat + z.maxLat) * 0.5;
-                const cLng = (z.minLng + z.maxLng) * 0.5;
-                const radY = (z.maxY - z.minY) * 0.5;
-                const radL = (z.maxLng - z.minLng) * 0.5;
-                const r = Math.max(radY, radL, 0.05);
-                const cY = z.minY + radY;
-                z.center = longIsZ ? new THREE.Vector3(cLat, cY, cLng) : new THREE.Vector3(cLng, cY, cLat);
-                z.cY = cY;
-                z.cLng = cLng;
-                z.radius = r * 1.08;
-                z.latMinBound = z.minLat - 0.015 * W;
-                z.latMaxBound = z.maxLat + 0.015 * W;
+                z.cLng = (z.wMinLng + z.wMaxLng) * 0.5;
+                const radY = (z.wMaxY - z.wMinY) * 0.5;
+                const radL = (z.wMaxLng - z.wMinLng) * 0.5;
+                z.exactR = Math.max(radY, radL, z.rawR);
+                z.cY = (z.wMinY + z.wMaxY) * 0.5;
+            });
+
+            // Langkah 3B: Ukur lebar eksak tiap ban dari mahkota atas ban (terisolasi di udara bebas)
+            for (let mi = 0; mi < meshes.length; mi++) {
+                const pos = meshes[mi].geometry.attributes.position;
+                const m2r = meshToRoots[mi];
+                for (let i = 0; i < pos.count; i++) {
+                    v.fromBufferAttribute(pos, i).applyMatrix4(m2r);
+                    const lat = longIsZ ? v.x : v.z;
+                    const lng = longIsZ ? v.z : v.x;
+                    const dLat = lat - midLat;
+                    const absLat = Math.abs(dLat);
+                    if (absLat < 0.27 * W) continue;
+                    for (const z of validZones) {
+                        if (z.side * dLat > 0 &&
+                            Math.abs(lng - z.cLng) <= 0.55 * z.exactR &&
+                            v.y >= z.cY + 0.55 * z.exactR &&
+                            v.y <= z.cY + 1.05 * z.exactR) {
+                            if (absLat < z.innerAbsLat) z.innerAbsLat = absLat;
+                            if (absLat > z.outerAbsLat) z.outerAbsLat = absLat;
+                        }
+                    }
+                }
+            }
+
+            validZones.forEach((z) => {
+                const outerAbs = Number.isFinite(z.outerAbsLat) ? z.outerAbsLat : 0.50 * W;
+                const rawInner = Number.isFinite(z.innerAbsLat) ? z.innerAbsLat : (outerAbs - 0.19 * W);
+                const innerAbs = Math.max(rawInner, outerAbs - 0.23 * W, 0.28 * W);
+                const cLat = midLat + z.side * (innerAbs + outerAbs) * 0.5;
+                z.center = longIsZ ? new THREE.Vector3(cLat, z.cY, z.cLng) : new THREE.Vector3(z.cLng, z.cY, cLat);
+                z.radius = z.exactR * 1.03;
+                if (z.side > 0) {
+                    z.latMinBound = midLat + innerAbs - 0.005 * W;
+                    z.latMaxBound = midLat + outerAbs + 0.015 * W;
+                } else {
+                    z.latMinBound = midLat - outerAbs - 0.015 * W;
+                    z.latMaxBound = midLat - innerAbs + 0.005 * W;
+                }
             });
 
             function classify(pt) {
