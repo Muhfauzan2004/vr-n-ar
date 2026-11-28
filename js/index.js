@@ -1486,26 +1486,57 @@ function renderQrCatalog() {
     const listEl = document.getElementById('qr-catalog-list');
     if (!listEl || qrCatalogRendered) return;
 
+    const qrMeta = {
+        redbull: { num: '#1', shortSpec: '1.000+ HP • 355 km/j' },
+        ferrari: { num: '#16', shortSpec: '1.000 HP • 350 km/j' },
+        mercedes: { num: '#44', shortSpec: '1.000+ HP • 352 km/j' },
+        astonmartin: { num: '#14', shortSpec: '1.000 HP • 348 km/j' },
+        ducati: { num: '#1', shortSpec: 'MotoGP • Desmosedici V4' }
+    };
+
     const fragment = document.createDocumentFragment();
     Object.entries(VEHICLES).forEach(([key, data]) => {
         const card = document.createElement('div');
-        card.className = 'qr-item-card';
+        card.className = `qr-item-card qr-theme-${key}`;
+        const accentColor = data.color === '#00594f' ? '#10b981' : (data.color || '#38bdf8');
+        card.style.setProperty('--team-accent', accentColor);
 
         const isMoto = key === 'ducati';
+        const meta = qrMeta[key] || { num: 'AR', shortSpec: data.cat };
         const safeFilename = `QR_${data.name.replace(/[^A-Za-z0-9]+/g, '_')}.png`;
 
         card.innerHTML = `
+            <div class="qr-item-glow"></div>
             <div class="qr-item-top">
-                <span class="qr-item-name">${data.name}</span>
+                <div class="qr-item-brand">
+                    <span class="qr-item-num">${meta.num}</span>
+                    <div>
+                        <div class="qr-item-name">${data.name}</div>
+                        <div class="qr-item-sub">${data.cat}</div>
+                    </div>
+                </div>
                 <span class="qr-item-tag ${isMoto ? 'motogp' : ''}">${data.tag || 'PATTERN'}</span>
             </div>
-            <div class="qr-item-preview">
-                <img src="${data.qr}" alt="QR ${data.name}" loading="lazy">
+            <div class="qr-marker-stage">
+                <span class="qr-corner tl"></span>
+                <span class="qr-corner tr"></span>
+                <span class="qr-corner bl"></span>
+                <span class="qr-corner br"></span>
+                <div class="qr-item-preview">
+                    <div class="qr-marker-blackbox">
+                        <img src="${data.qr}" alt="QR ${data.name}" loading="lazy">
+                        <div class="qr-scan-beam"></div>
+                    </div>
+                    <div class="qr-marker-footer">
+                        <span class="qr-marker-dot"></span>
+                        <span>AR MARKER • ${key.toUpperCase()}</span>
+                    </div>
+                </div>
             </div>
-            <div class="qr-item-caption">Pindai QR Marker ${data.name}</div>
+            <div class="qr-item-caption">${meta.shortSpec}</div>
             <div class="qr-item-actions">
-                <a class="qr-btn-download" href="${data.qr}" download="${safeFilename}">Unduh Marker</a>
-                <button type="button" class="qr-btn-simulate" onclick="simulateQrScan('${key}')">Simulasi Scan</button>
+                <a class="qr-btn-download" href="${data.qr}" download="${safeFilename}">⬇ Unduh Marker</a>
+                <button type="button" class="qr-btn-simulate" onclick="simulateQrScan('${key}')">▶ Simulasi Scan</button>
             </div>
         `;
         fragment.appendChild(card);

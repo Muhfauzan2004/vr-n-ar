@@ -60,10 +60,12 @@ p.desc {
 }
 
 .card {
-    background: #1e293b;
-    border-radius: 20px;
-    padding: 22px 16px;
-    border: 2px solid #334155;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(165deg, #1a243b 0%, #101726 100%);
+    border-radius: 22px;
+    padding: 20px 16px;
+    border: 1.5px solid #334155;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -72,39 +74,58 @@ p.desc {
 
 .card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
 }
 
-.card.redbull { border-color: #0284c7; }
-.card.ferrari { border-color: #e11d48; }
-.card.mercedes { border-color: #00a19c; }
-.card.astonmartin { border-color: #00594f; }
-.card.ducati { border-color: #f59e0b; }
+.card.redbull { --team-accent: #0284c7; border-color: #0284c7; }
+.card.ferrari { --team-accent: #e11d48; border-color: #e11d48; }
+.card.mercedes { --team-accent: #00a19c; border-color: #00a19c; }
+.card.astonmartin { --team-accent: #10b981; border-color: #10b981; }
+.card.ducati { --team-accent: #f59e0b; border-color: #f59e0b; }
+
+.card-header-row {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
 
 .card-badge {
     font-family: 'Orbitron', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 800;
-    padding: 4px 14px;
-    border-radius: 12px;
-    margin-bottom: 10px;
+    padding: 4px 12px;
+    border-radius: 10px;
     color: #fff;
+    background: var(--team-accent, #0284c7);
 }
 
-.redbull .card-badge { background: #0284c7; }
-.ferrari .card-badge { background: #e11d48; }
-.mercedes .card-badge { background: #00a19c; }
-.astonmartin .card-badge { background: #00594f; }
-.ducati .card-badge { background: #d97706; }
+.card-series {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 8px;
+    background: rgba(52, 179, 122, 0.14);
+    border: 1px solid rgba(52, 179, 122, 0.45);
+    color: #4ade80;
+}
+
+.card-series.motogp {
+    background: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+}
 
 .card h2 {
     margin: 0 0 4px 0;
-    font-size: 1.05rem;
+    font-size: 1.08rem;
     color: #f8fafc;
 }
 
 .card p {
-    margin: 0 0 10px 0;
+    margin: 0 0 12px 0;
     font-size: 0.8rem;
     color: #94a3b8;
 }
@@ -126,21 +147,58 @@ p.desc {
     color: #f8fafc;
 }
 
+.qr-stage {
+    position: relative;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.qr-corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: var(--team-accent, #38bdf8);
+    border-style: solid;
+    pointer-events: none;
+}
+
+.qr-corner.tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 5px 0 0 0; }
+.qr-corner.tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 5px 0 0; }
+.qr-corner.bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 5px; }
+.qr-corner.br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 5px 0; }
+
 .qr-wrapper {
     background: #fff;
-    padding: 10px;
-    border-radius: 16px;
-    margin-bottom: 8px;
+    padding: 9px 9px 7px 9px;
+    border-radius: 14px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+
+.qr-black-frame {
+    background: #05070c;
+    padding: 9px;
+    border-radius: 10px;
 }
 
 .qr-img {
-    width: 175px;
-    height: 175px;
+    width: 162px;
+    height: 162px;
     display: block;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.qr-marker-label {
+    margin-top: 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #0f172a;
 }
 
 .instructions {
