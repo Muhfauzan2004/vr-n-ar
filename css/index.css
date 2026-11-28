@@ -892,6 +892,8 @@ body.rumble {
 .qr-modal-body {
     padding: 16px;
     overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -908,6 +910,7 @@ body.rumble {
 
 .qr-item-card {
     position: relative;
+    flex-shrink: 0;
     overflow: hidden;
     background: linear-gradient(160deg, #161f33 0%, #0f1524 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
